@@ -3,19 +3,24 @@
 
 import pandas as pd
 import numpy as np
+import json
+
 from datetime import datetime, time, timedelta
 
-rvu_path = "C:/Users/SEQW17620/Documents/RVU/rdjon/"
+with open('settings.json') as f:
+	settings = json.load(f)
 
-input_file_1116 = rvu_path + "mddr1116.csv"
-rvu_out_ind_1116 = "../data/rvu1116_out_ind.csv"
-rvu_out_dr_1116 = "../data/rvu1116_out_dr.csv"
+root = settings['root']
+input = root + settings['input']
+output = root + settings['output']
+rvu_input = input + settings['rvu']
+tour_arb_output = output + "tour_arb.csv"
+koder = root + settings['koder']
+skiprows = settings['skiprows']
+nrows = settings['nrows']
 
-rvu_out_ind_both = "../data/rvu_both_out_ind.csv"
-rvu_out_dr_both = "../data/rvu_both_out_dr.csv"
-
-cols = ["UENR", "BOST_LAN", "UP_FORV", "AGE", "D_ARE", "D_FORD","D_A_KL", "D_B_KL", "UEDAG", "VIKT_DAG", "VIKT", "VIKT_K", 'UEYEAR',"H_MANAD","D_A_S","D_B_S","D_A_SVE","D_B_SVE","D_A_PKT", "D_B_PKT"]
-rvu_dr_raw_1116= pd.read_csv(input_file_1116, usecols=cols)
+cols = "UENR,BOST_LAN,D_ARE,D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
+rvu_dr_raw_1116= pd.read_csv(rvu_input, usecols=cols)
 
 rvu_dr_raw_1116['years'] = '11-16'
 rvu_dr_raw = rvu_dr_raw_1116
@@ -28,19 +33,19 @@ rvu_dr_raw = rvu_dr_raw_1116
 
 # Read and define lookup tables for survey codes
 
-mode_codes = pd.read_csv(rvu_path + "fm_kod.txt", sep='\t')
+mode_codes = pd.read_csv(koder + "fm_kod.txt", sep='\t')
 mode_lookup = dict(zip(mode_codes["id"], mode_codes["grp"]))
 
-purpose_codes = pd.read_csv(rvu_path + "ärende_kod_gen.txt", sep='\t')
+purpose_codes = pd.read_csv(koder + "ärende_kod_gen.txt", sep='\t')
 purpose_lookup = dict(zip(purpose_codes["id"], purpose_codes["grp"]))
 
-place_codes = pd.read_csv(rvu_path + "plats_kod.txt", sep='\t')
+place_codes = pd.read_csv(koder + "plats_kod.txt", sep='\t')
 place_lookup = dict(zip(place_codes["id"], place_codes["plats"]))
 
-region_codes = pd.read_csv(rvu_path + "region_kod.txt", sep=',')
+region_codes = pd.read_csv(koder + "region_kod.txt", sep=',')
 region_lookup = dict(zip(region_codes["lkod"], region_codes["region"]))
 
-work_codes = pd.read_csv(rvu_path + "arbete_kod.txt", sep='\t')
+work_codes = pd.read_csv(koder + "arbete_kod.txt", sep='\t')
 work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
 
@@ -61,7 +66,7 @@ rvu_cleaned=rvu_cleaned.replace(np.nan,-99)
 year=2021
 
 
-rvu_dr = rvu_cleaned[["UENR", "VIKT_DAG", "VIKT_K", "AGE", 'UEDAG', 'years','D_A_S','D_B_S']].copy()
+rvu_dr = rvu_cleaned["UENR,VIKT_DAG,UEDAG,years,D_A_S,D_B_S".split(',')].copy()
 rvu_dr=rvu_dr.rename(columns={"D_A_S":"D_A_DESO","D_B_S":"D_B_DESO"})   #1116
 rvu_dr["mode"] = rvu_cleaned.apply(lambda x: mode_lookup[x["D_FORD"]], axis=1)
 rvu_dr["purpose"] = rvu_cleaned.apply(lambda x: purpose_lookup[x["D_ARE"]], axis=1)
@@ -73,14 +78,9 @@ rvu_dr["trv_region"] = rvu_cleaned.apply(lambda x: region_lookup[x["BOST_LAN"]],
 
 # Eftersom vi inte vill släpa med oss all individ-information genom de funktioner som vi använder för att skapa resedagböcker och turer så skapar vi här en tabell med individinformation som vi sedan kan koda på turerna igen.
 
-rvu_ind = rvu_dr.groupby('UENR',as_index=False).nth(0)[['UENR', 'trv_region', "AGE", 'UEDAG', 'years', 'VIKT_DAG']]
+rvu_ind = rvu_dr.groupby('UENR',as_index=False).nth(0)['UENR,trv_region,UEDAG'.split(',')]
 n_ind_dr = rvu_dr.groupby('UENR').ngroups
 print(f'{rvu_dr.shape[0]} observations for {n_ind_dr} individuals in the cleaned dataset')
-
-# Sparar tabellerna till filer. Läses in av create_tours.ipynb
-rvu_dr.to_csv(rvu_out_dr_both)
-rvu_ind.to_csv(rvu_out_ind_both)
-rvu_ind[rvu_ind['years'] == '11-16'].to_csv(rvu_out_ind_1116)
 
 # skapa delresor om resan inte eller börja hemma
 
@@ -442,9 +442,9 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
     for idx, a in acts.iterrows():
       act_range.extend(RangeFromStartEnd(a['start_time'],a['end_time'], int_length))
 
-    if len(act_range[0]) < 1:
-      print(uenr)
-      print(act_range)
+    # if len(act_range[0]) < 1:
+    #   print(uenr)
+    #   print(act_range)
 
     if len(act_range) > 1:
       s_act = act_range[0][0]
@@ -470,7 +470,7 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
 
     main_trip_range = []
     for idx, mt in mainmode_trips.iterrows():
-        print(mt)
+        #print(mt)
         ranges = RangeFromStartEnd(mt['start_time'], mt['end_time'], int_length)
         main_trip_range.extend(ranges)
         s = ranges[0][0]
@@ -502,15 +502,12 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
 
 
 # Gör om till turer. Tar en stund.
-#from fn_create_tours import ModeHierarchy,ModeRecoded, ToTimestep
 homebased_diaries["start_time"] = pd.to_timedelta(homebased_diaries["start_time"])
 homebased_diaries["end_time"] = pd.to_timedelta(homebased_diaries["end_time"])
 homebased_diaries["duration"] = pd.to_timedelta(homebased_diaries["duration"])
 tours_arb = homebased_diaries.groupby(['UENR','tour_id']).apply(lambda df: TourProperties(df, interval_len))
 tours_arb = tours_arb.reset_index()
 
-
-rvu_ind = pd.read_csv('../data/rvu1116_out_ind.csv')
-ttdf_arb = pd.merge(tours_arb[['UENR','tour_id','purpose','mode','weight','act_duration','mainmode_duration','split_act','zoneA','zoneB']], rvu_ind, how='left', on='UENR')
-ttdf_arb.to_csv('tour_arb_1116_0908.csv')
+ttdf_arb = pd.merge(tours_arb['UENR,tour_id,purpose,mode,weight,act_duration,mainmode_duration,split_act,zoneA,zoneB'.split(',')], rvu_ind, how='left', on='UENR')
+ttdf_arb.to_csv(tour_arb_output)
 
