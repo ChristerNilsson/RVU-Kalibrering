@@ -5,8 +5,6 @@ import pandas as pd
 import numpy as np
 import json
 
-from datetime import datetime, time, timedelta
-
 with open('settings.json') as f:
 	settings = json.load(f)
 
@@ -48,32 +46,30 @@ region_lookup = dict(zip(region_codes["lkod"], region_codes["region"]))
 work_codes = pd.read_csv(koder + "arbete_kod.txt", sep='\t')
 work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
-
-def ConvertToTime(year: int, inttime:int):
-	if (inttime<2400)&(inttime!=99):
-		hour = int(inttime/100)
-		minute = int(inttime%100)
-		timeOfDay = datetime(year=year, month = 1, day=1, hour=hour,minute=minute)
-		return timeOfDay- datetime(2021,1,1)
+def ConvertToMinutes(t):
+	if (t < 2400) and (t != 99):
+		hour = t // 100
+		minute = t % 100
+		return 60 * hour + minute
 	else:
 		return -99
+
 
 # att filtera ut missing values för dessa variabler
 rvu_cleaned=rvu_dr_raw[rvu_dr_raw.D_A_SVE.eq(1.0)&rvu_dr_raw.D_B_SVE.eq(1.0)] # filtera ut utrikesresor
 rvu_cleaned=rvu_cleaned[~((rvu_cleaned.D_A_PKT.eq(1)&rvu_cleaned.D_B_PKT.eq(1))|(rvu_cleaned.D_A_PKT.eq(2)&rvu_cleaned.D_B_PKT.eq(2))|(rvu_cleaned.D_A_PKT.eq(3)&rvu_cleaned.D_B_PKT.eq(3)))]#filtera ut och rundresor
 
 rvu_cleaned=rvu_cleaned.replace(np.nan,-99)
-year=2021
 
 
 rvu_dr = rvu_cleaned["UENR,VIKT_DAG,UEDAG,years,D_A_S,D_B_S".split(',')].copy()
-rvu_dr=rvu_dr.rename(columns={"D_A_S":"D_A_DESO","D_B_S":"D_B_DESO"})   #1116
+rvu_dr = rvu_dr.rename(columns={"D_A_S":"D_A_DESO","D_B_S":"D_B_DESO"})
 rvu_dr["mode"] = rvu_cleaned.apply(lambda x: mode_lookup[x["D_FORD"]], axis=1)
 rvu_dr["purpose"] = rvu_cleaned.apply(lambda x: purpose_lookup[x["D_ARE"]], axis=1)
 rvu_dr["place_orig"] = rvu_cleaned.apply(lambda x: place_lookup[x["D_A_PKT"]], axis=1)
 rvu_dr["place_dest"] = rvu_cleaned.apply(lambda x: place_lookup[x["D_B_PKT"]], axis=1)
-rvu_dr['start_time'] = rvu_cleaned["D_A_KL"].apply(lambda x: ConvertToTime(year,x))
-rvu_dr['end_time'] = rvu_cleaned["D_B_KL"].apply(lambda x: ConvertToTime(year,x))
+rvu_dr['start_time'] = rvu_cleaned["D_A_KL"].apply(lambda x: x)
+rvu_dr['end_time'] = rvu_cleaned["D_B_KL"].apply(lambda x: x)
 rvu_dr["trv_region"] = rvu_cleaned.apply(lambda x: region_lookup[x["BOST_LAN"]], axis=1)
 
 # Eftersom vi inte vill släpa med oss all individ-information genom de funktioner som vi använder för att skapa resedagböcker och turer så skapar vi här en tabell med individinformation som vi sedan kan koda på turerna igen.
@@ -204,8 +200,8 @@ def CreateDiary(trip_list:pd.DataFrame):
 #        'type': 'ärende',
 		'purpose': trip_list.iloc[0]['place_orig'],
 		'mode': 'aktivitet',
-		'start_time': trip_list.iloc[0]['start_time'],#timedelta(),
-		'end_time': trip_list.iloc[0]['end_time'],#timedelta(),
+		'start_time': trip_list.iloc[0]['start_time'],
+		'end_time': trip_list.iloc[0]['end_time'],
 		'cross_midnight': cross_midnight,
 		'weight': trip_list.iloc[0]['VIKT_DAG'],
 		'zoneA':trip_list.iloc[0]['D_A_DESO'],
@@ -223,12 +219,12 @@ def CreateDiary(trip_list:pd.DataFrame):
 		# When someone starts a trip after midnight
 		if(trip_start < prev_act_end):
 			cross_midnight = True
-			trip_start = trip_start + timedelta(days = 1)
+			trip_start = trip_start + 2400
 
 		# Either because trip crosses midnight, or both start and end next day
 		if(trip_end < trip_start):
 			cross_midnight = True
-			trip_end = trip_end + timedelta(days = 1)
+			trip_end = trip_end + 2400
 
 		act_start = trip_end
 
@@ -282,16 +278,10 @@ def CreateDiary(trip_list:pd.DataFrame):
 			tour_id += 1
 	# End of loop over trips
 
-	# If last activity starts before midnight
-	# set its end time to midnight, othewise leave it be
-	if(activities[idx - 1]['end_time'] <= timedelta(hours=24)):
-		activities[idx - 1]['end_time'] = timedelta(hours=23, minutes=59)
 
-	# Transform the list of activities to a dataframe
-	df = pd.DataFrame(activities)
-	df['duration'] = df['end_time'] - df['start_time']
-#    df['duration_str'] = df['duration'].apply(str)
-	return df
+	for row in activities:
+		row['duration'] = ConvertToMinutes(row['end_time']) - ConvertToMinutes(row['start_time'])
+	return pd.DataFrame(activities)
 
 
 diary = complete_rvu_dr.groupby('UENR').apply(CreateDiary)
@@ -300,8 +290,6 @@ diary.drop('level_1', axis='columns', inplace=True)
 
 # Eftersom vi inte vill släpa med oss all individ-information genom de funktioner som vi använder för att skapa resedagböcker och turer så skapar vi här en tabell med individinformation som vi sedan kan koda på turerna igen.
 # Vi definierar en konstant, interval_len, definierar hur många minuter varje tidsintervall är. De använder vi i histogrammen senare i dokumentet. time_of_day är en uppräkning av tiden på dagen för början på varje tidsinterval. Tiden anges i timmar (flyttal, dvs 10:30 blir 10.5)
-
-interval_len = 30
 
 homebased_diaries= diary[diary.day_type.eq('bostad -> bostad')]
 
@@ -353,27 +341,7 @@ def ModeRecoded(mode):
 		return 'övrigt'
 
 
-# Gör om tid-från-midnatt till tidsperiod
-def ToTimestep(t:timedelta, length):
-	return int(t.seconds / 60 // length)
-
-
-def RangeFromStartEnd(start, end, interval_length):
-	ranges = []
-	s = ToTimestep(start, interval_length);
-	e = 1 + ToTimestep(end, interval_length);
-	if(e <= s):
-		# Special case when activity crosses midnight
-		e_m = 1 + ToTimestep(timedelta(hours=23, minutes=59), interval_length)
-		s_m = ToTimestep(timedelta(hours=24), interval_length)
-		ranges.append(range(s, e_m))
-		ranges.append(range(s_m, e))
-	else:
-		ranges.append(range(s,e))
-		return ranges
-
-
-def TourProperties(tour_diary:pd.DataFrame, int_length):
+def TourProperties(tour_diary):
 
 	all_activities = tour_diary[tour_diary['mode'] == 'aktivitet']
 	activities = all_activities[all_activities['purpose'] != 'bostad']
@@ -396,8 +364,6 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
 	# Turer som inte har någon aktivitet definieras som rundturer.
 	if(len(activities.index) == 0):
 
-		act_range = RangeFromStartEnd(trips.iloc[0]['start_time'], trips.iloc[-1]['end_time'], int_length)
-
 		tour = {
 	#        'UENR': uenr,
 	#        'tour_id': tour_id,
@@ -407,11 +373,6 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
 			'act_duration': trips['duration'].sum(),
 			'mainmode_duration': trips['duration'].sum(),
 			'split_act': False,
-			'activity_range': act_range,
-			'trip_range': act_range,
-			'main_trip_range':  act_range,
-			'outbound_range': [],
-			'inbound_range': [],
 			'zoneA':trips.iloc[0]['zoneA'],
 			'zoneB':trips.iloc[0]['zoneB'],
 			#'real':trips.iloc[0]['real']
@@ -438,48 +399,7 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
 	act_duration = acts['duration'].sum()
 	mainmode_duration = mainmode_trips['duration'].sum()
 	split_act = acts.shape[0] > 1
-	act_range = []
-	for idx, a in acts.iterrows():
-		act_range.extend(RangeFromStartEnd(a['start_time'],a['end_time'], int_length))
 
-	# if len(act_range[0]) < 1:
-	#   print(uenr)
-	#   print(act_range)
-
-	if len(act_range) > 1:
-		s_act = act_range[0][0]
-		e_act = act_range[-1][-1]
-	else:
-		if len(act_range[0]) > 1:
-			s_act = act_range[0][0]
-			e_act = act_range[0][-1]
-		elif isinstance(act_range[0],int):
-			s_act = act_range
-			e_act = s_act
-		else:
-			s_act = act_range[0][0]
-			e_act = s_act
-
-
-	outbound_range = []
-	inbound_range = []
-	trip_range = []
-	for idx, t in trips.iterrows():
-		ranges = RangeFromStartEnd(t['start_time'], t['end_time'], int_length)
-		trip_range.extend(ranges)
-
-	main_trip_range = []
-	for idx, mt in mainmode_trips.iterrows():
-		#print(mt)
-		ranges = RangeFromStartEnd(mt['start_time'], mt['end_time'], int_length)
-		main_trip_range.extend(ranges)
-		s = ranges[0][0]
-		if (s <= s_act):
-			outbound_range.extend(ranges)
-		if (s >= e_act):
-			inbound_range.extend(ranges)
-
- 
 	tour = {
 #        'UENR': uenr,
 #        'tour_id': tour_id,
@@ -489,11 +409,6 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
 		'act_duration': act_duration,
 		'mainmode_duration': mainmode_duration,
 		'split_act': split_act,
-		'activity_range': act_range,
-		'trip_range': trip_range,
-		'main_trip_range':  main_trip_range,
-		'outbound_range': outbound_range,
-		'inbound_range': inbound_range,
 		'zoneA':zoneA,
 		'zoneB':zoneB,
 		#'real':real
@@ -501,11 +416,7 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
 	return pd.Series(tour)
 
 
-# Gör om till turer. Tar en stund.
-homebased_diaries["start_time"] = pd.to_timedelta(homebased_diaries["start_time"])
-homebased_diaries["end_time"] = pd.to_timedelta(homebased_diaries["end_time"])
-homebased_diaries["duration"] = pd.to_timedelta(homebased_diaries["duration"])
-tours_arb = homebased_diaries.groupby(['UENR','tour_id']).apply(lambda df: TourProperties(df, interval_len))
+tours_arb = homebased_diaries.groupby(['UENR','tour_id']).apply(lambda df: TourProperties(df))
 tours_arb = tours_arb.reset_index()
 
 ttdf_arb = pd.merge(tours_arb['UENR,tour_id,purpose,mode,weight,act_duration,mainmode_duration,split_act,zoneA,zoneB'.split(',')], rvu_ind, how='left', on='UENR')
