@@ -5,7 +5,7 @@ import pandas as pd
 import json
 
 def ConvertToMinutes(t):
-	if (t < 2400) and (t != 99):
+	if t < 2400 and t != 99:
 		hour = t // 100
 		minute = t % 100
 		return 60 * hour + minute
@@ -116,45 +116,27 @@ modifierat så att tåg ingår i koll
 indata: en lista av alla fm under resan
 utdata: huvudfm
 	"""
-	if ('tåg' in modes):
-		return 'koll'
-	elif ('tbana' in modes):
-		return 'koll'
-	elif ('spv' in modes):
-		return 'koll'
-	elif ('buss' in modes):
-		return 'koll'
-	elif ('bil' in modes):
-		return 'bil'
-	elif ('pass' in modes):
-		return 'pass'
-	elif ('cykel' in modes):
-		return 'cykel'
-	elif ('gång' in modes):
-		return 'gång'
-	else:
-		return 'övrigt'
+	if 'tåg' in modes: return 'koll'
+	elif 'tbana' in modes: return 'koll'
+	elif 'spv' in modes: return 'koll'
+	elif 'buss' in modes: return 'koll'
+	elif 'bil' in modes: return 'bil'
+	elif 'pass' in modes: return 'pass'
+	elif 'cykel' in modes: return 'cykel'
+	elif 'gång' in modes: return 'gång'
+	else: return 'övrigt'
 
 def ModeRecoded(mode):
 	"""Kodar om tåg, tbana etc till koll"""
-	if mode == 'tåg':
-		return 'koll'
-	elif mode == 'tbana':
-		return 'koll'
-	elif mode == 'spv':
-		return 'koll'
-	elif mode == 'buss':
-		return 'koll'
-	elif mode == 'bil':
-		return 'bil'
-	elif mode == 'pass':
-		return 'pass'
-	elif mode == 'cykel':
-		return 'cykel'
-	elif mode == 'gång':
-		return 'gång'
-	else:
-		return 'övrigt'
+	if mode == 'tåg': return 'koll'
+	elif mode == 'tbana': return 'koll'
+	elif mode == 'spv': return 'koll'
+	elif mode == 'buss': return 'koll'
+	elif mode == 'bil': return 'bil'
+	elif mode == 'pass': return 'pass'
+	elif mode == 'cykel': return 'cykel'
+	elif mode == 'gång': return 'gång'
+	else: return 'övrigt'
 
 def pickColumns(cols, rows):
 	result = []
@@ -291,21 +273,21 @@ region_lookup = dict(zip(region_codes["lkod"], region_codes["region"]))
 work_codes = pd.read_csv(koder + "arbete_kod.txt", sep='\t')
 work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
-# att filtera ut missing values för dessa variabler
 rvuC = [r for r in rvuB if r['D_A_SVE'] == 1 and r['D_B_SVE'] == 1] # filtera ut utrikesresor
 
 cols = 'UENR,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_FORD,D_ARE,D_A_PKT,D_B_PKT,D_A_KL,D_B_KL,BOST_LAN'.split(',')
 rvuD = pickColumns(cols, rvuC)
-# rvuD = [r for r in rvuD if r['DAG'] < 6] # filtrera ut helgdagar
-
 rvuD = renameColumns({"D_A_KL":"A_KL", "D_B_KL":"B_KL", "D_A_PKT":"A_P", "D_B_PKT":"B_P", "D_ARE":"ARE", "D_FORD":"FRD", "BOST_LAN":"LAN", "UEDAG": "DAG", "D_A_S":"A_SAMS", "D_B_S":"B_SAMS"}, rvuD)
 
-rvuE = [r for r in rvuD if not (
+rvuD = [r for r in rvuD if r['DAG'] <= 7] # filtrera fram veckodagar.
+
+rvuE = [r for r in rvuD if not ( # filtrera bort rundresor
 	r['A_P'] == 1 and r['B_P'] == 1 or
 	r['A_P'] == 2 and r['B_P'] == 2 or
-	r['A_P'] == 3 and r['B_P'] == 3)]  # filtrera bort rundresor
+	r['A_P'] == 3 and r['B_P'] == 3)]
 
-#rvu_cleaned=rvu_cleaned.replace(np.nan,-99)
+# Ersätt missing values (NA) med -99
+#rvuE = rvuE.replace(np.nan,-99)
 
 for row in rvuE:
 	row['mode'] = mode_lookup[row['FRD']]
@@ -318,11 +300,8 @@ for row in rvuE:
 
 rvuF = groupBy(rvuE, ['UENR'])
 
-
 # Skapa resedagbok av delresor
-# 
 # Vi börjar med att gruppera delresorna per individ. För varje grupp körs funktionen `CreateDiary` som är definierad i filen `create_diary.py`. I den funktionen läggs det in aktiviteter före, mellan och efter delresorna så att hela dagen är fylld av antingen resor eller aktiviteter. Först läggs en hemma-, arbete- eller övrigt-aktivitet till i början, beroende på var individien startar sin dag. Vi noterar den informationen i utdata för att senare kommer vi att sortera bort resor som inte startat och slutat hemma. För varje resa läggs sedan en aktivitet till efter resan som börjar när resan slutar. Ärendet definieras av det ärende som uppgetts för resan. Sluttiden sätts till starttiden för nästa resa. Den sista aktiviteten får sluttid 23.59 utom i de fall då resandet pågår till efter midnatt. Då sätts den sista aktiviteten till en minut efter start.
-#
 # Vi kommer senare att använda den här utökade listan av resor och aktiviteter för att kunna se när olika aktiviteter utförs och för att kunna definiera huvudresans ärende efter vilken aktivitet som är längst i de fall det inte finns någon arbetsresa eller tjänsteresa.
 
 rvuI = []
@@ -333,12 +312,12 @@ for group in rvuF:
 
 rvuJ = [r for r in rvuI if r['day_type'] in ['bostad->bostad','bostad->annat','bostad->bostad_ovr','bostad->bostad_fri']]  # homebased_diaries
 rvuK = groupBy(rvuJ, ['UENR', 'tour'])
-rvuL = [TourProperties(rvuK[group]) for group in rvuK]  # tours_arb
+rvuL = [TourProperties(rvuK[group]) for group in rvuK]
 
 cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB,parts'.split(',')
 rvuL = pickColumns(cols, rvuL)
-rvuM = rvuL  # eliminateSameSAMS(rvuL)
+rvuM = rvuL
 
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(tour_arb_output, index=False, columns=cols) #, float_format = "%.3f")
+	ttdf_arb.to_csv(tour_arb_output, index=False, columns=cols)
