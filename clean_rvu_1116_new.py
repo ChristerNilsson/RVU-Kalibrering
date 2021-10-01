@@ -3,9 +3,6 @@
 
 import pandas as pd
 import json
-import time
-
-#start = time.time()
 
 def ConvertToMinutes(t):
 	if (t < 2400) and (t != 99):
