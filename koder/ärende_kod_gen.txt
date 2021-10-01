@@ -1,0 +1,42 @@
+id	grp	beskrivning
+2	Arbete	Arbete
+3	Skola	Skola
+4	Tjänste	Tjänsteresa/resa i arbetet
+5	Skola	Studieresa/resa i studierna
+6	Daglig	Inköp av dagligvaror
+7	Sällan	Övriga inköp
+8	SHB	Hälso- och sjukvård
+9	SHB	Post- eller bankärende
+10	SHB	Bokning av biljetter/tider
+11	SHB	Barntillsyn (hämta/lämna)
+12	SHB	Annan service
+13	Skjutsa	Skjutsa(följa)/hämta annan person
+14	Släkt	Släkt och vänner
+15	Rekr	Hobbies,musikutövning,studiecirkel,kurs
+16	Rekr	Restaurang,cafe
+17	Rekr	Motion och friluftsliv, t ex idrott, promenad etc
+18	Rekr	Underhållning och kultur, fest, koncert, bio etc
+19	Rekr	Föreningsliv, religionsutövning
+20	Rekr	Delta i eller följa med vid barns fritidsaktivitet
+21	Rekr	(Annan) semesterresa
+22	Rekr	Annan fritidsaktivitet
+23	SHB	Hämta / Lämna saker
+24	SHB	Begravning / Gravvård
+25	Övriga	Annat ärende
+33	Övriga	Söka information/uppgifter
+34	Digital	Diskussion av frågor som rör tjänsten
+35	Digital	Diskussion av frågor som rör studierna
+36	Digital	Surfa utan särskilt ärende
+37	Digital	Ladda ner filer/bilder/dokument/program etc
+55	Övriga	Annat ärende
+80	Arbete	Arbete (UP:s ordinarie arbetsplats)
+81	Arbete	Arbete (ej UP:s ordinarie arbetsplats)
+82	Arbete	Arbete, arbetsplats ej känd
+85	Skola	Studier (UP:s ordinarie skola)
+86	Skola	Studier (ej UP:s ordinarie skola)
+87	Skola	Studier, skola ej känd
+96	Tjänste	Besättningsresa
+97	Tjänste	Yrkesmässig trafik på väg
+98	Tjänste	Besättningsresa
+99	Övriga	Felkodad?
+-99	fel	missing

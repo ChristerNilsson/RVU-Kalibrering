@@ -1,0 +1,66 @@
+id	grp	beskrivning
+0	fel	Uppgift saknas
+1	gång	Gick till fots
+2	cykel	Cykel
+3	övr	Moped
+4	övr	Mc
+8	tåg	Tåg
+10	tbana	T-bana
+11	spv	Spårvagn
+12	buss	Buss
+13	buss	Skolskjuts
+14	övr	FLYG, REGULJÄRT
+15	övr	FLYG, CHARTER
+16	övr	Fritidsbåt
+17	övr	Sjöfart
+18	övr	Snöskoter
+19	övr	TTraktor, arbetsredskap
+20	övr	Färdtjänst, taxi, passagerare
+21	övr	Färdtjänst, specialfordon, passagerare
+22	övr	Färdtjänst med specialfordon, förare
+23	övr	ANNAT FÄRDSÄTT 
+50	bil	PERSONBIL, FÖRARE
+51	pass	PERSONBIL, PASSAGERARE
+61	taxi	Taxi (ej färdtjänst), förare
+62	taxi	Taxi (ej färdtjänst), passagerare
+71	övr	Lastbil, förare
+72	övr	Lastbil, passagerare
+81	tåg	Tåg, affärsbiljett eller liknande
+82	tåg	Tåg, Normalbiljett
+83	tåg	Tåg, Lågpris (förköp, helgbiljett eller annan rabatt)
+84	tåg	Tåg, Kort (årskort, månadskort)
+85	tåg	Tåg, okänd typ
+86	tåg	Tåg, Regionaltåg och pendeltåg utanför Stockholms län
+87	tåg	Tåg, SL:s pendeltåg och lokaltåg inom Stockholms län
+88	tåg	Tåg, Annat tåg, t ex Intercity, X2000, ArlandaExpress och utländska tåg
+89	tåg	Tåg, besättningsresa
+121	buss	Lokalbuss, regionalbuss
+122	buss	Långfärdsbuss
+123	buss	Charterbuss
+124	buss	Annan buss
+125	buss	Buss, okänd typ
+141	övr	Flyg, business class, 1:a klass
+142	övr	Flyg, turistklass, ekonomiklass
+143	övr	Flyg, annat
+145	övr	Flyg, okänd klass
+149	övr	Flyg, besättningsresa
+501	bil	Personbil, förare, bil 1
+502	bil	Personbil, förare, bil 2
+503	bil	Personbil, förare, bil 3
+504	bil	Lånad bil
+505	bil	Hyrd bil
+506	bil	Medpassagerares bil
+507	bil	Annan bil
+508	bil	Arbetsgivarens bil
+509	bil	Personbil, förare. Ägandeform okänd
+511	pass	Personbil, passagerare, bil 1
+512	pass	Personbil, passagerare, bil 2
+513	pass	Personbil, passagerare, bil 3
+514	pass	Lånad bil
+515	pass	Hyrd bil
+516	pass	Medpassagerares bil
+517	pass	Annan bil
+518	pass	Arbetsgivarens bil
+519	pass	Personbil, passagerare. Ägandeform okänd
+555	övr	Annat färdsätt 
+-99	fel	miss
