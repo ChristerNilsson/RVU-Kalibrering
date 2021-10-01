@@ -50,13 +50,13 @@ work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
 
 def ConvertToTime(year: int, inttime:int):
-    if (inttime<2400)&(inttime!=99):
-        hour = int(inttime/100)
-        minute = int(inttime%100)
-        timeOfDay = datetime(year=year, month = 1, day=1, hour=hour,minute=minute)
-        return timeOfDay- datetime(2021,1,1)
-    else:
-        return -99
+	if (inttime<2400)&(inttime!=99):
+		hour = int(inttime/100)
+		minute = int(inttime%100)
+		timeOfDay = datetime(year=year, month = 1, day=1, hour=hour,minute=minute)
+		return timeOfDay- datetime(2021,1,1)
+	else:
+		return -99
 
 # att filtera ut missing values för dessa variabler
 rvu_cleaned=rvu_dr_raw[rvu_dr_raw.D_A_SVE.eq(1.0)&rvu_dr_raw.D_B_SVE.eq(1.0)] # filtera ut utrikesresor
@@ -86,98 +86,98 @@ print(f'{rvu_dr.shape[0]} observations for {n_ind_dr} individuals in the cleaned
 
 def complete_tours(data):
 
-    data = data.reset_index()
-    complete_data = data.copy(deep=True)
-    complete_data["real"] = True
-    offset = 0
+	data = data.reset_index()
+	complete_data = data.copy(deep=True)
+	complete_data["real"] = True
+	offset = 0
 
-    for index, row in data.iterrows():
+	for index, row in data.iterrows():
 
-        user_id = row["UENR"]
+		user_id = row["UENR"]
 
-        # first row special case, if tour is not starting at home -> add from home trip
-        if index == 0:
-            if row["place_orig"] != "bostad":
-                extra_row = row.copy(deep=True)
-                extra_row["place_orig"] = "bostad"
-                extra_row["place_dest"] = "annat"
-                extra_row["D_A_DESO"] = row["D_A_DESO"]
-                extra_row["D_B_DESO"] = row["D_A_DESO"]
-                extra_row["start_time"] = row["start_time"]
-                extra_row["end_time"] = row["start_time"]
+		# first row special case, if tour is not starting at home -> add from home trip
+		if index == 0:
+			if row["place_orig"] != "bostad":
+				extra_row = row.copy(deep=True)
+				extra_row["place_orig"] = "bostad"
+				extra_row["place_dest"] = "annat"
+				extra_row["D_A_DESO"] = row["D_A_DESO"]
+				extra_row["D_B_DESO"] = row["D_A_DESO"]
+				extra_row["start_time"] = row["start_time"]
+				extra_row["end_time"] = row["start_time"]
 
-                extra_row["real"] = False
-                data_add = complete_data[:1].append(extra_row, ignore_index=True)
-                complete_data = pd.concat([data_add[1:], complete_data], ignore_index=True)
-                offset += 1
+				extra_row["real"] = False
+				data_add = complete_data[:1].append(extra_row, ignore_index=True)
+				complete_data = pd.concat([data_add[1:], complete_data], ignore_index=True)
+				offset += 1
 
 
-        if index > 0:
-            previous_row = data.iloc[index - 1]
-            previous_user_id = previous_row["UENR"]
+		if index > 0:
+			previous_row = data.iloc[index - 1]
+			previous_user_id = previous_row["UENR"]
 
-            if user_id != previous_user_id:
+			if user_id != previous_user_id:
 
-                # if tour is not starting from home -> add trip from home
-                if row["place_orig"] != "bostad":
-                    extra_row = row.copy(deep=True)
-                    extra_row["place_orig"] = "bostad"
-                    extra_row["place_dest"] = "annat"
-                    extra_row["D_A_DESO"] = row["D_B_DESO"]
-                    extra_row["D_B_DESO"] = row["D_A_DESO"]
-                    extra_row["end_time"] = row["start_time"]
-                    extra_row["real"] = False
-                    data_add = complete_data[:index + offset].append(extra_row, ignore_index=True)
-                    complete_data = pd.concat([data_add, complete_data[index + offset:]], ignore_index=True)
-                    offset += 1
+				# if tour is not starting from home -> add trip from home
+				if row["place_orig"] != "bostad":
+					extra_row = row.copy(deep=True)
+					extra_row["place_orig"] = "bostad"
+					extra_row["place_dest"] = "annat"
+					extra_row["D_A_DESO"] = row["D_B_DESO"]
+					extra_row["D_B_DESO"] = row["D_A_DESO"]
+					extra_row["end_time"] = row["start_time"]
+					extra_row["real"] = False
+					data_add = complete_data[:index + offset].append(extra_row, ignore_index=True)
+					complete_data = pd.concat([data_add, complete_data[index + offset:]], ignore_index=True)
+					offset += 1
 
-        # last row special case, if tour is not ending at home -> add back to home trip
-        if index == len(data) - 1:
-            if row["place_dest"] != "bostad":
-                extra_row = row.copy(deep=True)
-                extra_row["place_orig"] = "annat"
-                extra_row["place_dest"] = "bostad"
-                extra_row["D_A_DESO"] = row["D_B_DESO"]
-                extra_row["D_B_DESO"] = row["D_A_DESO"]
-                extra_row["start_time"] = row["end_time"]
+		# last row special case, if tour is not ending at home -> add back to home trip
+		if index == len(data) - 1:
+			if row["place_dest"] != "bostad":
+				extra_row = row.copy(deep=True)
+				extra_row["place_orig"] = "annat"
+				extra_row["place_dest"] = "bostad"
+				extra_row["D_A_DESO"] = row["D_B_DESO"]
+				extra_row["D_B_DESO"] = row["D_A_DESO"]
+				extra_row["start_time"] = row["end_time"]
 
-                extra_row["real"] = False
-                data_add = complete_data[:index + offset + 1].append(extra_row, ignore_index=True)
-                complete_data = pd.concat([data_add, complete_data[index + offset + 1:]], ignore_index=True)
-            break
+				extra_row["real"] = False
+				data_add = complete_data[:index + offset + 1].append(extra_row, ignore_index=True)
+				complete_data = pd.concat([data_add, complete_data[index + offset + 1:]], ignore_index=True)
+			break
 
-        next_row = data.iloc[index + 1]
-        next_user_id = next_row["UENR"]
+		next_row = data.iloc[index + 1]
+		next_user_id = next_row["UENR"]
 
-        if user_id == next_user_id:
-            # if next tour trip is starting from home but current tour trip is not ending at home -> add back to home trip
-            if next_row["place_orig"] == "bostad" and row["place_dest"] != "bostad":
-                extra_row = row.copy(deep=True)
-                extra_row["place_orig"] = "annat"
-                extra_row["place_dest"] = "bostad"
-                extra_row["D_A_DESO"] = row["D_B_DESO"]
-                extra_row["D_B_DESO"] = row["D_A_DESO"]
-                extra_row["start_time"] = row["end_time"]
-                extra_row["real"] = False
-                data_add = complete_data[:index + offset + 1].append(extra_row, ignore_index=True)
-                complete_data = pd.concat([data_add, complete_data[index + offset + 1:]], ignore_index=True)
-                offset += 1
+		if user_id == next_user_id:
+			# if next tour trip is starting from home but current tour trip is not ending at home -> add back to home trip
+			if next_row["place_orig"] == "bostad" and row["place_dest"] != "bostad":
+				extra_row = row.copy(deep=True)
+				extra_row["place_orig"] = "annat"
+				extra_row["place_dest"] = "bostad"
+				extra_row["D_A_DESO"] = row["D_B_DESO"]
+				extra_row["D_B_DESO"] = row["D_A_DESO"]
+				extra_row["start_time"] = row["end_time"]
+				extra_row["real"] = False
+				data_add = complete_data[:index + offset + 1].append(extra_row, ignore_index=True)
+				complete_data = pd.concat([data_add, complete_data[index + offset + 1:]], ignore_index=True)
+				offset += 1
 
-        else:
-            # if tour is not ending at home -> add back to home trip
-            if row["place_dest"] != "bostad":
-                extra_row = row.copy(deep=True)
-                extra_row["place_orig"] = "annat"
-                extra_row["place_dest"] = "bostad"
-                extra_row["D_A_DESO"] = row["D_B_DESO"]
-                extra_row["D_B_DESO"] = row["D_A_DESO"]
-                extra_row["start_time"] = row["end_time"]
-                extra_row["real"] = False
-                data_add = complete_data[:index + offset + 1].append(extra_row, ignore_index=True)
-                complete_data = pd.concat([data_add, complete_data[index + offset + 1:]], ignore_index=True)
-                offset += 1
+		else:
+			# if tour is not ending at home -> add back to home trip
+			if row["place_dest"] != "bostad":
+				extra_row = row.copy(deep=True)
+				extra_row["place_orig"] = "annat"
+				extra_row["place_dest"] = "bostad"
+				extra_row["D_A_DESO"] = row["D_B_DESO"]
+				extra_row["D_B_DESO"] = row["D_A_DESO"]
+				extra_row["start_time"] = row["end_time"]
+				extra_row["real"] = False
+				data_add = complete_data[:index + offset + 1].append(extra_row, ignore_index=True)
+				complete_data = pd.concat([data_add, complete_data[index + offset + 1:]], ignore_index=True)
+				offset += 1
 
-    return complete_data
+	return complete_data
 
 
 complete_rvu_dr=complete_tours(rvu_dr)
@@ -189,109 +189,109 @@ complete_rvu_dr=complete_tours(rvu_dr)
 # Vi kommer senare att använda den här utökade listan av resor och aktiviteter för att kunna se när olika aktiviteter utförs och för att kunna definiera huvudresans ärende efter vilken aktivitet som är längst i de fall det inte finns någon arbetsresa eller tjänsteresa.
 
 def CreateDiary(trip_list:pd.DataFrame):
-    ## ToDo: Identify work based tours    
+	## ToDo: Identify work based tours
 
-    idx = 1
-    tour_id = 1
-    day_type = trip_list.iloc[0]['place_orig'] + ' -> ' + trip_list.iloc[-1]['place_dest']
-    cross_midnight = False
-    
-    # First, create a morning activity, wherever the person starts their morning (usually at home, sometimes somewhere else)
-    at_home_morning = {
-        'act_id': idx,
-        'tour_id': tour_id,
-        'day_type': day_type,
+	idx = 1
+	tour_id = 1
+	day_type = trip_list.iloc[0]['place_orig'] + ' -> ' + trip_list.iloc[-1]['place_dest']
+	cross_midnight = False
+
+	# First, create a morning activity, wherever the person starts their morning (usually at home, sometimes somewhere else)
+	at_home_morning = {
+		'act_id': idx,
+		'tour_id': tour_id,
+		'day_type': day_type,
 #        'type': 'ärende',
-        'purpose': trip_list.iloc[0]['place_orig'],
-        'mode': 'aktivitet',
-        'start_time': trip_list.iloc[0]['start_time'],#timedelta(),
-        'end_time': trip_list.iloc[0]['end_time'],#timedelta(),
-        'cross_midnight': cross_midnight,
-        'weight': trip_list.iloc[0]['VIKT_DAG'],
-        'zoneA':trip_list.iloc[0]['D_A_DESO'],
-        'zoneB':trip_list.iloc[0]['D_B_DESO'],
-        'real':trip_list.iloc[0]['real']
-        }
-    activities = []
+		'purpose': trip_list.iloc[0]['place_orig'],
+		'mode': 'aktivitet',
+		'start_time': trip_list.iloc[0]['start_time'],#timedelta(),
+		'end_time': trip_list.iloc[0]['end_time'],#timedelta(),
+		'cross_midnight': cross_midnight,
+		'weight': trip_list.iloc[0]['VIKT_DAG'],
+		'zoneA':trip_list.iloc[0]['D_A_DESO'],
+		'zoneB':trip_list.iloc[0]['D_B_DESO'],
+		'real':trip_list.iloc[0]['real']
+		}
+	activities = []
 
-    activities.append(at_home_morning)
-    for index, row in trip_list.iterrows():
-        trip_start =  row['start_time']
-        trip_end = row['end_time']
-        prev_act_end = activities[idx - 1]['end_time']
+	activities.append(at_home_morning)
+	for index, row in trip_list.iterrows():
+		trip_start =  row['start_time']
+		trip_end = row['end_time']
+		prev_act_end = activities[idx - 1]['end_time']
 
-        # When someone starts a trip after midnight
-        if(trip_start < prev_act_end):
-            cross_midnight = True
-            trip_start = trip_start + timedelta(days = 1)
+		# When someone starts a trip after midnight
+		if(trip_start < prev_act_end):
+			cross_midnight = True
+			trip_start = trip_start + timedelta(days = 1)
 
-        # Either because trip crosses midnight, or both start and end next day
-        if(trip_end < trip_start):
-            cross_midnight = True
-            trip_end = trip_end + timedelta(days = 1)
+		# Either because trip crosses midnight, or both start and end next day
+		if(trip_end < trip_start):
+			cross_midnight = True
+			trip_end = trip_end + timedelta(days = 1)
 
-        act_start = trip_end
+		act_start = trip_end
 
-        # Previous activity ends when this trip starts
-        # add the end time to it
-        activities[idx - 1]['end_time'] = trip_start
-        
-        # Identify trips that end up at home
-        purpose = row['purpose']
-        end_tour = False
-        if(row['place_dest'] == 'bostad'):
-            purpose = 'bostad'
-            end_tour = True
+		# Previous activity ends when this trip starts
+		# add the end time to it
+		activities[idx - 1]['end_time'] = trip_start
 
-        # Add the trip to the diary
-        trip = {
-        'act_id': idx + 1,
-        'tour_id': tour_id,
-        'day_type': day_type,
-        'purpose': purpose,
-        'mode': row['mode'],
-        'start_time': trip_start,
-        'end_time': trip_end,
-        'cross_midnight': cross_midnight,
-        'weight': row['VIKT_DAG'],
-        'zoneA':row['D_A_DESO'],
-        'zoneB':row['D_B_DESO'],
-        'real':row['real']
-        }
-        activities.append(trip)
-        idx = idx + 1
+		# Identify trips that end up at home
+		purpose = row['purpose']
+		end_tour = False
+		if(row['place_dest'] == 'bostad'):
+			purpose = 'bostad'
+			end_tour = True
 
-        # Add the next activity to the diary
-        act = {
-        'act_id': idx + 1,
-        'tour_id': tour_id,
-        'day_type': day_type,
-        'purpose': purpose,
-        'mode': 'aktivitet',
-        'start_time': act_start,
-        'end_time': act_start,
-        'cross_midnight': cross_midnight,
-        'weight': row['VIKT_DAG'],
-        'zoneA':row['D_A_DESO'],
-        'zoneB':row['D_B_DESO']
-        }
-        activities.append(act)
-        idx = idx + 1
+		# Add the trip to the diary
+		trip = {
+		'act_id': idx + 1,
+		'tour_id': tour_id,
+		'day_type': day_type,
+		'purpose': purpose,
+		'mode': row['mode'],
+		'start_time': trip_start,
+		'end_time': trip_end,
+		'cross_midnight': cross_midnight,
+		'weight': row['VIKT_DAG'],
+		'zoneA':row['D_A_DESO'],
+		'zoneB':row['D_B_DESO'],
+		'real':row['real']
+		}
+		activities.append(trip)
+		idx = idx + 1
 
-        if(end_tour):
-            tour_id += 1
-    # End of loop over trips
-    
-    # If last activity starts before midnight
-    # set its end time to midnight, othewise leave it be
-    if(activities[idx - 1]['end_time'] <= timedelta(hours=24)):
-        activities[idx - 1]['end_time'] = timedelta(hours=23, minutes=59)
+		# Add the next activity to the diary
+		act = {
+		'act_id': idx + 1,
+		'tour_id': tour_id,
+		'day_type': day_type,
+		'purpose': purpose,
+		'mode': 'aktivitet',
+		'start_time': act_start,
+		'end_time': act_start,
+		'cross_midnight': cross_midnight,
+		'weight': row['VIKT_DAG'],
+		'zoneA':row['D_A_DESO'],
+		'zoneB':row['D_B_DESO']
+		}
+		activities.append(act)
+		idx = idx + 1
 
-    # Transform the list of activities to a dataframe
-    df = pd.DataFrame(activities)
-    df['duration'] = df['end_time'] - df['start_time']
+		if(end_tour):
+			tour_id += 1
+	# End of loop over trips
+
+	# If last activity starts before midnight
+	# set its end time to midnight, othewise leave it be
+	if(activities[idx - 1]['end_time'] <= timedelta(hours=24)):
+		activities[idx - 1]['end_time'] = timedelta(hours=23, minutes=59)
+
+	# Transform the list of activities to a dataframe
+	df = pd.DataFrame(activities)
+	df['duration'] = df['end_time'] - df['start_time']
 #    df['duration_str'] = df['duration'].apply(str)
-    return df
+	return df
 
 
 diary = complete_rvu_dr.groupby('UENR').apply(CreateDiary)
@@ -311,194 +311,194 @@ homebased_diaries= diary[diary.day_type.eq('bostad -> bostad')]
 # indata: en lista av alla fm under resan
 # utdata: huvudfm
 def ModeHierarchy(modes):
-  if ('tåg' in modes.values):
-    return 'koll'
-  elif ('tbana' in modes.values):
-    return 'koll'
-  elif ('spv' in modes.values):
-    return 'koll'
-  elif ('buss' in modes.values):
-    return 'koll'
-  elif ('bil' in modes.values):
-    return 'bil'
-  elif ('pass' in modes.values):
-    return 'pass' 
-  elif ('cykel' in modes.values):
-    return 'cykel'
-  elif ('gång' in modes.values):
-    return 'gång'
-  else:
-    return 'övrigt'
+	if ('tåg' in modes.values):
+		return 'koll'
+	elif ('tbana' in modes.values):
+		return 'koll'
+	elif ('spv' in modes.values):
+		return 'koll'
+	elif ('buss' in modes.values):
+		return 'koll'
+	elif ('bil' in modes.values):
+		return 'bil'
+	elif ('pass' in modes.values):
+		return 'pass'
+	elif ('cykel' in modes.values):
+		return 'cykel'
+	elif ('gång' in modes.values):
+		return 'gång'
+	else:
+		return 'övrigt'
 
 
 # Kodar om tåg, tbana etc till koll
 def ModeRecoded(mode):
-  if mode == 'tåg':
-    return 'koll'
-  elif mode == 'tbana':
-    return 'koll'
-  elif mode == 'spv':
-    return 'koll'
-  elif mode == 'buss':
-    return 'koll'
-  elif mode == 'bil':
-    return 'bil'
-  elif mode == 'pass':
-    return 'pass' 
-  elif mode == 'cykel':
-    return 'cykel'
-  elif mode == 'gång':
-    return 'gång'
-  else:
-    return 'övrigt'
+	if mode == 'tåg':
+		return 'koll'
+	elif mode == 'tbana':
+		return 'koll'
+	elif mode == 'spv':
+		return 'koll'
+	elif mode == 'buss':
+		return 'koll'
+	elif mode == 'bil':
+		return 'bil'
+	elif mode == 'pass':
+		return 'pass'
+	elif mode == 'cykel':
+		return 'cykel'
+	elif mode == 'gång':
+		return 'gång'
+	else:
+		return 'övrigt'
 
 
 # Gör om tid-från-midnatt till tidsperiod
 def ToTimestep(t:timedelta, length):
-  return int(t.seconds / 60 // length)
+	return int(t.seconds / 60 // length)
 
 
 def RangeFromStartEnd(start, end, interval_length):
-  ranges = []
-  s = ToTimestep(start, interval_length);
-  e = 1 + ToTimestep(end, interval_length);
-  if(e <= s):
-    # Special case when activity crosses midnight
-    e_m = 1 + ToTimestep(timedelta(hours=23, minutes=59), interval_length)
-    s_m = ToTimestep(timedelta(hours=24), interval_length)
-    ranges.append(range(s, e_m))
-    ranges.append(range(s_m, e))
-  else:
-    ranges.append(range(s,e))
-  return ranges
+	ranges = []
+	s = ToTimestep(start, interval_length);
+	e = 1 + ToTimestep(end, interval_length);
+	if(e <= s):
+		# Special case when activity crosses midnight
+		e_m = 1 + ToTimestep(timedelta(hours=23, minutes=59), interval_length)
+		s_m = ToTimestep(timedelta(hours=24), interval_length)
+		ranges.append(range(s, e_m))
+		ranges.append(range(s_m, e))
+	else:
+		ranges.append(range(s,e))
+		return ranges
 
 
 def TourProperties(tour_diary:pd.DataFrame, int_length):
 
-  all_activities = tour_diary[tour_diary['mode'] == 'aktivitet']
-  activities = all_activities[all_activities['purpose'] != 'bostad']
+	all_activities = tour_diary[tour_diary['mode'] == 'aktivitet']
+	activities = all_activities[all_activities['purpose'] != 'bostad']
 
-  trips = tour_diary.loc[tour_diary['mode'] != 'aktivitet']
-  uenr = trips.iloc[0]['UENR']
-  tour_id = trips.iloc[0]['tour_id']
-  weight = trips.iloc[0]['weight']
-  mode = ModeHierarchy(trips['mode'])
-  zoneA=trips.iloc[0]['zoneA']
-  mainmode_trips = trips[trips['mode'].apply(ModeRecoded) == mode]
-  main_zone = tour_diary[tour_diary['purpose'] != 'bostad']
-  if(len( main_zone.index) != 0):
-    zone= main_zone.loc[main_zone['duration'].idxmax()]
-    zoneB=zone['zoneB']
-  else:
-    zone=tour_diary.loc[tour_diary['duration'].idxmax()]
-    zoneB=zone['zoneB']
+	trips = tour_diary.loc[tour_diary['mode'] != 'aktivitet']
+	uenr = trips.iloc[0]['UENR']
+	tour_id = trips.iloc[0]['tour_id']
+	weight = trips.iloc[0]['weight']
+	mode = ModeHierarchy(trips['mode'])
+	zoneA=trips.iloc[0]['zoneA']
+	mainmode_trips = trips[trips['mode'].apply(ModeRecoded) == mode]
+	main_zone = tour_diary[tour_diary['purpose'] != 'bostad']
+	if(len( main_zone.index) != 0):
+		zone= main_zone.loc[main_zone['duration'].idxmax()]
+		zoneB=zone['zoneB']
+	else:
+		zone=tour_diary.loc[tour_diary['duration'].idxmax()]
+		zoneB=zone['zoneB']
 
-  # Turer som inte har någon aktivitet definieras som rundturer.
-  if(len(activities.index) == 0):
+	# Turer som inte har någon aktivitet definieras som rundturer.
+	if(len(activities.index) == 0):
 
-    act_range = RangeFromStartEnd(trips.iloc[0]['start_time'], trips.iloc[-1]['end_time'], int_length)
+		act_range = RangeFromStartEnd(trips.iloc[0]['start_time'], trips.iloc[-1]['end_time'], int_length)
 
-    tour = {
-#        'UENR': uenr,
-#        'tour_id': tour_id,
-        'purpose': trips.iloc[0]['purpose'] + '_rundtur',
-        'mode': mode,
-        'weight': weight,
-        'act_duration': trips['duration'].sum(),
-        'mainmode_duration': trips['duration'].sum(),
-        'split_act': False,
-        'activity_range': act_range,
-        'trip_range': act_range,
-        'main_trip_range':  act_range,
-        'outbound_range': [],
-        'inbound_range': [],
-        'zoneA':trips.iloc[0]['zoneA'],
-        'zoneB':trips.iloc[0]['zoneB'],
-        #'real':trips.iloc[0]['real']
-    }
+		tour = {
+	#        'UENR': uenr,
+	#        'tour_id': tour_id,
+			'purpose': trips.iloc[0]['purpose'] + '_rundtur',
+			'mode': mode,
+			'weight': weight,
+			'act_duration': trips['duration'].sum(),
+			'mainmode_duration': trips['duration'].sum(),
+			'split_act': False,
+			'activity_range': act_range,
+			'trip_range': act_range,
+			'main_trip_range':  act_range,
+			'outbound_range': [],
+			'inbound_range': [],
+			'zoneA':trips.iloc[0]['zoneA'],
+			'zoneB':trips.iloc[0]['zoneB'],
+			#'real':trips.iloc[0]['real']
+		}
 
-# Annars är det en tur med ett ärende
-  else:
-    # Ifall det finns ett tjänste-ärende i turen sätts ärendet till det
-    if('Arbete' in activities['purpose'].values):
-        purpose = 'Arbete'
-        zoneB=activities[activities['purpose']=='Arbete'].iloc[0]['zoneB']
-    # Ifall det finns ett arbete-ärende i turen sätts ärendet till det
-    elif('Tjänste' in activities['purpose'].values):
-        purpose = 'Tjänste'
-        zoneB=activities[activities['purpose']=='Tjänste'].iloc[0]['zoneB']
-    # Annars välj den längsta aktiviteten som ärende
-    else:
-        main_activity = activities.loc[activities['duration'].idxmax()]
-        purpose = main_activity['purpose']
-        #zoneB=main_activity['zoneB']
+	# Annars är det en tur med ett ärende
+	else:
+		# Ifall det finns ett tjänste-ärende i turen sätts ärendet till det
+		if('Arbete' in activities['purpose'].values):
+			purpose = 'Arbete'
+			zoneB=activities[activities['purpose']=='Arbete'].iloc[0]['zoneB']
+		# Ifall det finns ett arbete-ärende i turen sätts ärendet till det
+		elif('Tjänste' in activities['purpose'].values):
+			purpose = 'Tjänste'
+			zoneB=activities[activities['purpose']=='Tjänste'].iloc[0]['zoneB']
+		# Annars välj den längsta aktiviteten som ärende
+		else:
+			main_activity = activities.loc[activities['duration'].idxmax()]
+			purpose = main_activity['purpose']
+			#zoneB=main_activity['zoneB']
 
-    # När vi bestämt huvudärende så använder vi alla de aktiviteterna
-    acts = activities[activities['purpose'] == purpose]
-    act_duration = acts['duration'].sum()
-    mainmode_duration = mainmode_trips['duration'].sum()
-    split_act = acts.shape[0] > 1
-    act_range = []
-    for idx, a in acts.iterrows():
-      act_range.extend(RangeFromStartEnd(a['start_time'],a['end_time'], int_length))
+	# När vi bestämt huvudärende så använder vi alla de aktiviteterna
+	acts = activities[activities['purpose'] == purpose]
+	act_duration = acts['duration'].sum()
+	mainmode_duration = mainmode_trips['duration'].sum()
+	split_act = acts.shape[0] > 1
+	act_range = []
+	for idx, a in acts.iterrows():
+		act_range.extend(RangeFromStartEnd(a['start_time'],a['end_time'], int_length))
 
-    # if len(act_range[0]) < 1:
-    #   print(uenr)
-    #   print(act_range)
+	# if len(act_range[0]) < 1:
+	#   print(uenr)
+	#   print(act_range)
 
-    if len(act_range) > 1:
-      s_act = act_range[0][0]
-      e_act = act_range[-1][-1]
-    else:
-      if len(act_range[0]) > 1:
-        s_act = act_range[0][0]
-        e_act = act_range[0][-1]
-      elif isinstance(act_range[0],int):
-        s_act = act_range
-        e_act = s_act
-      else:
-        s_act = act_range[0][0]
-        e_act = s_act
+	if len(act_range) > 1:
+		s_act = act_range[0][0]
+		e_act = act_range[-1][-1]
+	else:
+		if len(act_range[0]) > 1:
+			s_act = act_range[0][0]
+			e_act = act_range[0][-1]
+		elif isinstance(act_range[0],int):
+			s_act = act_range
+			e_act = s_act
+		else:
+			s_act = act_range[0][0]
+			e_act = s_act
 
 
-    outbound_range = []
-    inbound_range = []
-    trip_range = []
-    for idx, t in trips.iterrows():
-        ranges = RangeFromStartEnd(t['start_time'], t['end_time'], int_length)
-        trip_range.extend(ranges)
+	outbound_range = []
+	inbound_range = []
+	trip_range = []
+	for idx, t in trips.iterrows():
+		ranges = RangeFromStartEnd(t['start_time'], t['end_time'], int_length)
+		trip_range.extend(ranges)
 
-    main_trip_range = []
-    for idx, mt in mainmode_trips.iterrows():
-        #print(mt)
-        ranges = RangeFromStartEnd(mt['start_time'], mt['end_time'], int_length)
-        main_trip_range.extend(ranges)
-        s = ranges[0][0]
-        if (s <= s_act):
-          outbound_range.extend(ranges)
-        if (s >= e_act):
-          inbound_range.extend(ranges)
+	main_trip_range = []
+	for idx, mt in mainmode_trips.iterrows():
+		#print(mt)
+		ranges = RangeFromStartEnd(mt['start_time'], mt['end_time'], int_length)
+		main_trip_range.extend(ranges)
+		s = ranges[0][0]
+		if (s <= s_act):
+			outbound_range.extend(ranges)
+		if (s >= e_act):
+			inbound_range.extend(ranges)
 
  
-    tour = {
+	tour = {
 #        'UENR': uenr,
 #        'tour_id': tour_id,
-        'purpose': purpose,
-        'mode': mode,
-        'weight': weight,
-        'act_duration': act_duration,
-        'mainmode_duration': mainmode_duration,
-        'split_act': split_act,
-        'activity_range': act_range,
-        'trip_range': trip_range,
-        'main_trip_range':  main_trip_range,
-        'outbound_range': outbound_range,
-        'inbound_range': inbound_range,
-        'zoneA':zoneA,
-        'zoneB':zoneB,
-        #'real':real
-    }
-  return pd.Series(tour)
+		'purpose': purpose,
+		'mode': mode,
+		'weight': weight,
+		'act_duration': act_duration,
+		'mainmode_duration': mainmode_duration,
+		'split_act': split_act,
+		'activity_range': act_range,
+		'trip_range': trip_range,
+		'main_trip_range':  main_trip_range,
+		'outbound_range': outbound_range,
+		'inbound_range': inbound_range,
+		'zoneA':zoneA,
+		'zoneB':zoneB,
+		#'real':real
+	}
+	return pd.Series(tour)
 
 
 # Gör om till turer. Tar en stund.
