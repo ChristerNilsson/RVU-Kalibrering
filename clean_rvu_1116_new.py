@@ -110,12 +110,7 @@ def groupBy(arr, cols):
 	return result
 
 def ModeHierarchy(modes):
-	"""
-Färdmedelshierarki enl Staffan Algers
-modifierat så att tåg ingår i koll
-indata: en lista av alla fm under resan
-utdata: huvudfm
-	"""
+	""" Färdmedelshierarki enl Staffan Algers modifierat så att tåg ingår i koll indata: en lista av alla fm under resan utdata: huvudfm """
 	if 'tåg' in modes: return 'koll'
 	elif 'tbana' in modes: return 'koll'
 	elif 'spv' in modes: return 'koll'
@@ -235,7 +230,6 @@ def TourProperties(tour_diary):
 			'split_act': split_act,
 		}
 
-
 with open('settings.json') as f:
 	settings = json.load(f)
 
@@ -250,7 +244,6 @@ nrows = settings['nrows']
 
 cols = "UENR,BOST_LAN,D_ARE,D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
 rvuA = pd.read_csv(rvu_input, usecols=cols, nrows=nrows, skiprows=range(1,skiprows))
-
 rvuB = rvuA.to_dict('records')
 
 # Koda om färdmedel, ärende etc
@@ -273,23 +266,18 @@ region_lookup = dict(zip(region_codes["lkod"], region_codes["region"]))
 work_codes = pd.read_csv(koder + "arbete_kod.txt", sep='\t')
 work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
-rvuC = [r for r in rvuB if r['D_A_SVE'] == 1 and r['D_B_SVE'] == 1] # filtera ut utrikesresor
+rvuC = [r for r in rvuB if r['D_A_SVE'] == 1 and r['D_B_SVE'] == 1] # filtera bort utrikesresor
 
 cols = 'UENR,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_FORD,D_ARE,D_A_PKT,D_B_PKT,D_A_KL,D_B_KL,BOST_LAN'.split(',')
 rvuD = pickColumns(cols, rvuC)
-rvuD = renameColumns({"D_A_KL":"A_KL", "D_B_KL":"B_KL", "D_A_PKT":"A_P", "D_B_PKT":"B_P", "D_ARE":"ARE", "D_FORD":"FRD", "BOST_LAN":"LAN", "UEDAG": "DAG", "D_A_S":"A_SAMS", "D_B_S":"B_SAMS"}, rvuD)
-
-rvuD = [r for r in rvuD if r['DAG'] <= 7] # filtrera fram veckodagar.
-
-rvuE = [r for r in rvuD if not ( # filtrera bort rundresor
-	r['A_P'] == 1 and r['B_P'] == 1 or
-	r['A_P'] == 2 and r['B_P'] == 2 or
-	r['A_P'] == 3 and r['B_P'] == 3)]
+rvuE = renameColumns({"D_A_KL":"A_KL", "D_B_KL":"B_KL", "D_A_PKT":"A_P", "D_B_PKT":"B_P", "D_ARE":"ARE", "D_FORD":"FRD", "BOST_LAN":"LAN", "UEDAG": "DAG", "D_A_S":"A_SAMS", "D_B_S":"B_SAMS"}, rvuD)
+rvuF = [r for r in rvuE if r['DAG'] <= 7] # filtrera fram veckodagar.
+rvuG = [r for r in rvuF if not (r['A_P'] == 1 and r['B_P'] == 1 or r['A_P'] == 2 and r['B_P'] == 2 or r['A_P'] == 3 and r['B_P'] == 3)] # filtrera bort rundresor
 
 # Ersätt missing values (NA) med -99
 #rvuE = rvuE.replace(np.nan,-99)
 
-for row in rvuE:
+for row in rvuG:
 	row['mode'] = mode_lookup[row['FRD']]
 	row["purpose"] = purpose_lookup[row["ARE"]]
 	row["a_p"] = place_lookup[row["A_P"]]
@@ -298,15 +286,15 @@ for row in rvuE:
 	row['b_kl'] = row["B_KL"]
 	row["region"] = region_lookup[row["LAN"]]
 
-rvuF = groupBy(rvuE, ['UENR'])
+rvuH = groupBy(rvuG, ['UENR'])
 
 # Skapa resedagbok av delresor
 # Vi börjar med att gruppera delresorna per individ. För varje grupp körs funktionen `CreateDiary` som är definierad i filen `create_diary.py`. I den funktionen läggs det in aktiviteter före, mellan och efter delresorna så att hela dagen är fylld av antingen resor eller aktiviteter. Först läggs en hemma-, arbete- eller övrigt-aktivitet till i början, beroende på var individien startar sin dag. Vi noterar den informationen i utdata för att senare kommer vi att sortera bort resor som inte startat och slutat hemma. För varje resa läggs sedan en aktivitet till efter resan som börjar när resan slutar. Ärendet definieras av det ärende som uppgetts för resan. Sluttiden sätts till starttiden för nästa resa. Den sista aktiviteten får sluttid 23.59 utom i de fall då resandet pågår till efter midnatt. Då sätts den sista aktiviteten till en minut efter start.
 # Vi kommer senare att använda den här utökade listan av resor och aktiviteter för att kunna se när olika aktiviteter utförs och för att kunna definiera huvudresans ärende efter vilken aktivitet som är längst i de fall det inte finns någon arbetsresa eller tjänsteresa.
 
 rvuI = []
-for group in rvuF:
-	lst = CreateDiary(rvuF[group])
+for group in rvuH:
+	lst = CreateDiary(rvuH[group])
 	for item in lst:
 		rvuI.append(item)
 
@@ -315,8 +303,7 @@ rvuK = groupBy(rvuJ, ['UENR', 'tour'])
 rvuL = [TourProperties(rvuK[group]) for group in rvuK]
 
 cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB,parts'.split(',')
-rvuL = pickColumns(cols, rvuL)
-rvuM = rvuL
+rvuM = pickColumns(cols, rvuL)
 
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
