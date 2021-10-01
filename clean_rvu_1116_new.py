@@ -1,27 +1,10 @@
-# To add a new cell, type '# %%'
-# To add a new markdown cell, type '# %% [markdown]'
-# %% [markdown]
-# # Process för att läsa in och rensa delresor
-# 
-# Kanske ändra till en för varje RVU?
-# 
-# 
-# %% [markdown]
-# ## Inläsning av data
+# Process för att läsa in och rensa delresor
+# Inläsning av data
 
-# %%
 import pandas as pd
 import numpy as np
-import altair as alt
-from vega_datasets import data
 from datetime import datetime, time, timedelta
-import pyreadstat
 
-# Importera egna funktioner
-#from fn_check_dr import CheckTrips, ConvertToTime
-
-
-# %%
 rvu_path = "C:/Users/SEQW17620/Documents/RVU/rdjon/"
 
 input_file_1116 = rvu_path + "mddr1116.csv"
@@ -31,24 +14,18 @@ rvu_out_dr_1116 = "../data/rvu1116_out_dr.csv"
 rvu_out_ind_both = "../data/rvu_both_out_ind.csv"
 rvu_out_dr_both = "../data/rvu_both_out_dr.csv"
 
-
-# %%
 cols = ["UENR", "BOST_LAN", "UP_FORV", "AGE", "D_ARE", "D_FORD","D_A_KL", "D_B_KL", "UEDAG", "VIKT_DAG", "VIKT", "VIKT_K", 'UEYEAR',"H_MANAD","D_A_S","D_B_S","D_A_SVE","D_B_SVE","D_A_PKT", "D_B_PKT"]
 rvu_dr_raw_1116= pd.read_csv(input_file_1116, usecols=cols)
 
-
-# %%
 rvu_dr_raw_1116['years'] = '11-16'
 rvu_dr_raw = rvu_dr_raw_1116
 
-# %% [markdown]
-# ## Koda om färdmedel, ärende etc
+# Koda om färdmedel, ärende etc
 # 
 # Vi kodar om resvaneundersökningens sifferkoder för till exempel färdmedel till de grupperade färdmedel som används i Sampers. Detsamma görs för ärende, plats (dvs bostad, arbetsplats, skola, annat). Vi kodar också på Sampers-region istället för län så att vi kan titta på eventuella skillnader mellan regionerna senare.
 # 
 # I RVU:erna är skola ett ärende, medan Sampers skiljer på skola för olika åldersgrupper. Här använder vi samma uppdelning som i skattningen, dvs i tre grupper: Grundskola för åldrarna 6-15 år, gymnasium för 16-18 år och vuxenutbildning för 19 år och uppåt.
 
-# %%
 # Read and define lookup tables for survey codes
 
 mode_codes = pd.read_csv(rvu_path + "fm_kod.txt", sep='\t')
@@ -67,7 +44,6 @@ work_codes = pd.read_csv(rvu_path + "arbete_kod.txt", sep='\t')
 work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
 
-# %%
 def ConvertToTime(year: int, inttime:int):
     if (inttime<2400)&(inttime!=99):
         hour = int(inttime/100)
@@ -77,26 +53,17 @@ def ConvertToTime(year: int, inttime:int):
     else:
         return -99
 
-
-# %%
-#att filtera ut missing values för dessa variabler
-#rvu_cleaned=rvu_dr_raw.dropna(subset=['D_FORD', 'D_ARE', "D_A_DESO", "D_B_DESO",'BOST_LAN'])
-rvu_cleaned=rvu_dr_raw[rvu_dr_raw.D_A_SVE.eq(1.0)&rvu_dr_raw.D_B_SVE.eq(1.0)] # filtera ut utrikesresor  
+# att filtera ut missing values för dessa variabler
+rvu_cleaned=rvu_dr_raw[rvu_dr_raw.D_A_SVE.eq(1.0)&rvu_dr_raw.D_B_SVE.eq(1.0)] # filtera ut utrikesresor
 rvu_cleaned=rvu_cleaned[~((rvu_cleaned.D_A_PKT.eq(1)&rvu_cleaned.D_B_PKT.eq(1))|(rvu_cleaned.D_A_PKT.eq(2)&rvu_cleaned.D_B_PKT.eq(2))|(rvu_cleaned.D_A_PKT.eq(3)&rvu_cleaned.D_B_PKT.eq(3)))]#filtera ut och rundresor
-#rvu_cleaned=rvu_cleaned[rvu_cleaned['UEDAG']<6] #filtera ut helgdagar
-
-#rvu_cleaned=rvu_cleaned[~((rvu_cleaned.D_A_PKT.eq(1)|rvu_cleaned.D_A_PKT.eq(2)|rvu_cleaned.D_A_PKT.eq(3))&(rvu_cleaned.D_B_PKT.eq(1)|rvu_cleaned.D_B_PKT.eq(2)|rvu_cleaned.D_B_PKT.eq(3)))]#filtera ut och rundresor
-
 
 rvu_cleaned=rvu_cleaned.replace(np.nan,-99)
 year=2021
 
 
-# %%
 rvu_dr = rvu_cleaned[["UENR", "VIKT_DAG", "VIKT_K", "AGE", 'UEDAG', 'years','D_A_S','D_B_S']].copy()
 rvu_dr=rvu_dr.rename(columns={"D_A_S":"D_A_DESO","D_B_S":"D_B_DESO"})   #1116
 rvu_dr["mode"] = rvu_cleaned.apply(lambda x: mode_lookup[x["D_FORD"]], axis=1)
-#rvu_dr["purpose"] = rvu_cleaned.apply(lambda x: RecodeSchool(purpose_lookup[x["D_ARE"]], x['AGE']), axis=1)
 rvu_dr["purpose"] = rvu_cleaned.apply(lambda x: purpose_lookup[x["D_ARE"]], axis=1)
 rvu_dr["place_orig"] = rvu_cleaned.apply(lambda x: place_lookup[x["D_A_PKT"]], axis=1)
 rvu_dr["place_dest"] = rvu_cleaned.apply(lambda x: place_lookup[x["D_B_PKT"]], axis=1)
@@ -104,28 +71,19 @@ rvu_dr['start_time'] = rvu_cleaned["D_A_KL"].apply(lambda x: ConvertToTime(year,
 rvu_dr['end_time'] = rvu_cleaned["D_B_KL"].apply(lambda x: ConvertToTime(year,x))
 rvu_dr["trv_region"] = rvu_cleaned.apply(lambda x: region_lookup[x["BOST_LAN"]], axis=1)
 
-# %% [markdown]
 # Eftersom vi inte vill släpa med oss all individ-information genom de funktioner som vi använder för att skapa resedagböcker och turer så skapar vi här en tabell med individinformation som vi sedan kan koda på turerna igen.
 
-# %%
-#rvu_ind = rvu_dr.groupby('UENR',as_index=False).nth(0)[['UENR', 'trv_region', 'UP_FORV', "AGE", 'UEDAG', 'years', 'VIKT_DAG']]
-#rvu_ind["work_status"] = rvu_ind["UP_FORV"].apply(lambda x: work_lookup[x])
 rvu_ind = rvu_dr.groupby('UENR',as_index=False).nth(0)[['UENR', 'trv_region', "AGE", 'UEDAG', 'years', 'VIKT_DAG']]
 n_ind_dr = rvu_dr.groupby('UENR').ngroups
 print(f'{rvu_dr.shape[0]} observations for {n_ind_dr} individuals in the cleaned dataset')
 
-
-# %%
 # Sparar tabellerna till filer. Läses in av create_tours.ipynb
 rvu_dr.to_csv(rvu_out_dr_both)
 rvu_ind.to_csv(rvu_out_ind_both)
-#rvu_dr[rvu_dr['years'] == '11-16'].to_csv(rvu_out_dr_1116)
 rvu_ind[rvu_ind['years'] == '11-16'].to_csv(rvu_out_ind_1116)
 
-# %% [markdown]
-# ##skapa delresor om resan inte eller börja hemma
+# skapa delresor om resan inte eller börja hemma
 
-# %%
 def complete_tours(data):
 
     data = data.reset_index()
@@ -222,18 +180,14 @@ def complete_tours(data):
     return complete_data
 
 
-# %%
 complete_rvu_dr=complete_tours(rvu_dr)
 
-# %% [markdown]
-# # Skapa resedagbok av delresor
+# Skapa resedagbok av delresor
 # 
 # Vi börjar med att gruppera delresorna per individ. För varje grupp körs funktionen `CreateDiary` som är definierad i filen `create_diary.py`. I den funktionen läggs det in aktiviteter före, mellan och efter delresorna så att hela dagen är fylld av antingen resor eller aktiviteter. Först läggs en hemma-, arbete- eller övrigt-aktivitet till i början, beroende på var individien startar sin dag. Vi noterar den informationen i utdata för att senare kommer vi att sortera bort resor som inte startat och slutat hemma. För varje resa läggs sedan en aktivitet till efter resan som börjar när resan slutar. Ärendet definieras av det ärende som uppgetts för resan. Sluttiden sätts till starttiden för nästa resa. Den sista aktiviteten får sluttid 23.59 utom i de fall då resandet pågår till efter midnatt. Då sätts den sista aktiviteten till en minut efter start.
-# 
-# 
+#
 # Vi kommer senare att använda den här utökade listan av resor och aktiviteter för att kunna se när olika aktiviteter utförs och för att kunna definiera huvudresans ärende efter vilken aktivitet som är längst i de fall det inte finns någon arbetsresa eller tjänsteresa.
 
-# %%
 def CreateDiary(trip_list:pd.DataFrame):
     ## ToDo: Identify work based tours    
 
@@ -340,30 +294,18 @@ def CreateDiary(trip_list:pd.DataFrame):
     return df
 
 
-# %%
-
-#diary = complete_rvu_dr.groupby('UENR').apply(CreateDiary)
 diary = complete_rvu_dr.groupby('UENR').apply(CreateDiary)
 diary = diary.reset_index()
 diary.drop('level_1', axis='columns', inplace=True)
 
-# %% [markdown]
 # Eftersom vi inte vill släpa med oss all individ-information genom de funktioner som vi använder för att skapa resedagböcker och turer så skapar vi här en tabell med individinformation som vi sedan kan koda på turerna igen.
-# %% [markdown]
 # Vi definierar en konstant, interval_len, definierar hur många minuter varje tidsintervall är. De använder vi i histogrammen senare i dokumentet. time_of_day är en uppräkning av tiden på dagen för början på varje tidsinterval. Tiden anges i timmar (flyttal, dvs 10:30 blir 10.5)
 
-# %%
 interval_len = 30
 
-
-# %%
-#kontrollera att bara 'bostad-bostad' finns
-#diary["day_type"].unique() 
-homebased_diaries= diary[diary.day_type.eq('bostad -> bostad')] 
-#diary[diary.day_type.eq('annat -> bostad')] 
+homebased_diaries= diary[diary.day_type.eq('bostad -> bostad')]
 
 
-# %%
 # Färdmedelshierarki enl Staffan Algers
 # modifierat så att tåg ingår i koll
 # indata: en lista av alla fm under resan
@@ -389,7 +331,6 @@ def ModeHierarchy(modes):
     return 'övrigt'
 
 
-# %%
 # Kodar om tåg, tbana etc till koll
 def ModeRecoded(mode):
   if mode == 'tåg':
@@ -412,13 +353,11 @@ def ModeRecoded(mode):
     return 'övrigt'
 
 
-# %%
 # Gör om tid-från-midnatt till tidsperiod
 def ToTimestep(t:timedelta, length):
   return int(t.seconds / 60 // length)
 
 
-# %%
 def RangeFromStartEnd(start, end, interval_length):
   ranges = []
   s = ToTimestep(start, interval_length);
@@ -434,7 +373,6 @@ def RangeFromStartEnd(start, end, interval_length):
   return ranges
 
 
-# %%
 def TourProperties(tour_diary:pd.DataFrame, int_length):
 
   all_activities = tour_diary[tour_diary['mode'] == 'aktivitet']
@@ -480,18 +418,6 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
     }
 
 # Annars är det en tur med ett ärende
-#  else:
-#    # Ifall det finns ett tjänste-ärende i turen sätts ärendet till det
-#    if('Tjänste' in activities['purpose'].values):
-#        purpose = 'Tjänste'
-#    # Ifall det finns ett arbete-ärende i turen sätts ärendet till det
-#    elif('Arbete' in activities['purpose'].values):
-#        purpose = 'Arbete'
-#    # Annars välj den längsta aktiviteten som ärende
-#    else:
-#        main_activity = activities.loc[activities['duration'].idxmax()]
-#        purpose = main_activity['purpose']
-# test with arbete first purpose
   else:
     # Ifall det finns ett tjänste-ärende i turen sätts ärendet till det
     if('Arbete' in activities['purpose'].values):
@@ -506,12 +432,6 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
         main_activity = activities.loc[activities['duration'].idxmax()]
         purpose = main_activity['purpose']
         #zoneB=main_activity['zoneB']
-# test with only duration time as purpose
-#  else:
-    # Ifall det finns ett tjänste-ärende i turen sätts ärendet till det
-    # Annars välj den längsta aktiviteten som ärende
-#    main_activity = activities.loc[activities['duration'].idxmax()]
-#    purpose = main_activity['purpose']  
 
     # När vi bestämt huvudärende så använder vi alla de aktiviteterna
     acts = activities[activities['purpose'] == purpose]
@@ -537,7 +457,6 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
         s_act = act_range
         e_act = s_act
       else:
-        # print(act_range)
         s_act = act_range[0][0]
         e_act = s_act
 
@@ -582,7 +501,6 @@ def TourProperties(tour_diary:pd.DataFrame, int_length):
   return pd.Series(tour)
 
 
-# %%
 # Gör om till turer. Tar en stund.
 #from fn_create_tours import ModeHierarchy,ModeRecoded, ToTimestep
 homebased_diaries["start_time"] = pd.to_timedelta(homebased_diaries["start_time"])
@@ -592,13 +510,7 @@ tours_arb = homebased_diaries.groupby(['UENR','tour_id']).apply(lambda df: TourP
 tours_arb = tours_arb.reset_index()
 
 
-# %%
 rvu_ind = pd.read_csv('../data/rvu1116_out_ind.csv')
 ttdf_arb = pd.merge(tours_arb[['UENR','tour_id','purpose','mode','weight','act_duration','mainmode_duration','split_act','zoneA','zoneB']], rvu_ind, how='left', on='UENR')
 ttdf_arb.to_csv('tour_arb_1116_0908.csv')
-
-
-# %%
-
-
 
