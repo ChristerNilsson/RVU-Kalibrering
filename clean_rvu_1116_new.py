@@ -3,14 +3,51 @@
 
 import pandas as pd
 import json
+import math
+
+UNKNOWN = -99
+
+def runAsserts():
+	assert ConvertToMinutes(-99) == -99
+	assert ConvertToMinutes(100) == 60
+	assert ConvertToMinutes(130) == 90
+	assert ConvertToMinutes(2400) == -99
+
+	rows = [{'A':1}, {'A':1}, {'A':2}]
+	assert groupBy(rows,['A']) == {'1':[{'A':1},{'A':1}], '2':[{'A':2}]}
+
+	assert ModeHierarchy(['buss','spv','cykel']), 'koll'
+	assert ModeHierarchy(['gång','gång','cykel']), 'cykel'
+	assert ModeHierarchy(['ånglok','sparkcykel']), 'övrigt'
+
+	assert ModeRecoded('gång') == 'gång'
+	assert ModeRecoded('buss') == 'koll'
+	assert ModeRecoded('sparkcykel') == 'övrigt'
+
+	rows = [{'A':1, 'B':2, 'C':3}, {'A':4, 'B':5, 'C':6}]
+	assert pickColumns(['A','C'],rows) == [{'A':1, 'C':3}, {'A':4, 'C':6}]
+	assert renameColumns({'A':'Adam','C':'Cesar'},rows) == [{'Adam':1, 'B':2, 'Cesar':3}, {'Adam':4, 'B':5, 'Cesar':6}]
+
+	assert mode_lookup[1] == 'gång'
+	assert mode_lookup[2] == 'cykel'
+
+	assert purpose_lookup[2] == 'Arbete'
+	assert purpose_lookup[3] == 'Skola'
+
+	assert place_lookup[2] == 'bostad_ovr'
+	assert place_lookup[3] == 'bostad_fri'
+
+	assert region_lookup[1] == 'SAMM'
+	assert region_lookup[14] == 'Väst'
+
+	assert work_lookup[3] == 'arbetar'
+	assert work_lookup[4] == 'övrigt'
 
 def ConvertToMinutes(t):
-	if t < 2400 and t != 99:
-		hour = t // 100
-		minute = t % 100
-		return 60 * hour + minute
-	else:
-		return -99
+	if t >= 2400 or t == UNKNOWN: return UNKNOWN
+	hour = t // 100
+	minute = t % 100
+	return 60 * hour + minute
 
 def CreateDiary(trip_list):
 	## ToDo: Identify work based tours
@@ -149,6 +186,15 @@ def renameColumns(trans, rows):
 			del r[col]
 	return rows
 
+def replaceNA(rvu):
+	for row in rvu:
+		for key in row:
+			if key == 'VIKT_DAG':
+				row[key] = round(row[key], 3)
+			else:
+				row[key] = UNKNOWN if math.isnan(row[key]) else round(row[key])
+	return rvu
+
 def TourProperties(tour_diary):
 	all_activities = [r for r in tour_diary if r['mode'] == 'aktivitet']
 	activities = [r for r in all_activities if r['purpose'] != 'bostad']
@@ -230,9 +276,7 @@ def TourProperties(tour_diary):
 			'split_act': split_act,
 		}
 
-with open('settings.json') as f:
-	settings = json.load(f)
-
+with open('settings.json') as f: settings = json.load(f)
 root = settings['root']
 input = root + settings['input']
 output = root + settings['output']
@@ -241,15 +285,6 @@ tour_arb_output = output + "tour_arb.csv"
 koder = root + settings['koder']
 skiprows = settings['skiprows']
 nrows = settings['nrows']
-
-cols = "UENR,BOST_LAN,D_ARE,D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
-rvuA = pd.read_csv(rvu_input, usecols=cols, nrows=nrows, skiprows=range(1,skiprows))
-rvuB = rvuA.to_dict('records')
-
-# Koda om färdmedel, ärende etc
-# Vi kodar om resvaneundersökningens sifferkoder för till exempel färdmedel till de grupperade färdmedel som används i Sampers. Detsamma görs för ärende, plats (dvs bostad, arbetsplats, skola, annat). Vi kodar också på Sampers-region istället för län så att vi kan titta på eventuella skillnader mellan regionerna senare.
-# I RVU:erna är skola ett ärende, medan Sampers skiljer på skola för olika åldersgrupper. Här använder vi samma uppdelning som i skattningen, dvs i tre grupper: Grundskola för åldrarna 6-15 år, gymnasium för 16-18 år och vuxenutbildning för 19 år och uppåt.
-# Read and define lookup tables for survey codes
 
 mode_codes = pd.read_csv(koder + "fm_kod.txt", sep='\t')
 mode_lookup = dict(zip(mode_codes["id"], mode_codes["grp"]))
@@ -266,6 +301,18 @@ region_lookup = dict(zip(region_codes["lkod"], region_codes["region"]))
 work_codes = pd.read_csv(koder + "arbete_kod.txt", sep='\t')
 work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
+runAsserts()
+
+cols = "UENR,BOST_LAN,D_ARE,D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
+rvuA = pd.read_csv(rvu_input, usecols=cols, nrows=nrows, skiprows=range(1,skiprows))
+rvuB = rvuA.to_dict('records')
+rvuB = replaceNA(rvuB)
+
+# Koda om färdmedel, ärende etc
+# Vi kodar om resvaneundersökningens sifferkoder för till exempel färdmedel till de grupperade färdmedel som används i Sampers. Detsamma görs för ärende, plats (dvs bostad, arbetsplats, skola, annat). Vi kodar också på Sampers-region istället för län så att vi kan titta på eventuella skillnader mellan regionerna senare.
+# I RVU:erna är skola ett ärende, medan Sampers skiljer på skola för olika åldersgrupper. Här använder vi samma uppdelning som i skattningen, dvs i tre grupper: Grundskola för åldrarna 6-15 år, gymnasium för 16-18 år och vuxenutbildning för 19 år och uppåt.
+# Read and define lookup tables for survey codes
+
 rvuC = [r for r in rvuB if r['D_A_SVE'] == 1 and r['D_B_SVE'] == 1] # filtera bort utrikesresor
 
 cols = 'UENR,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_FORD,D_ARE,D_A_PKT,D_B_PKT,D_A_KL,D_B_KL,BOST_LAN'.split(',')
@@ -273,9 +320,6 @@ rvuD = pickColumns(cols, rvuC)
 rvuE = renameColumns({"D_A_KL":"A_KL", "D_B_KL":"B_KL", "D_A_PKT":"A_P", "D_B_PKT":"B_P", "D_ARE":"ARE", "D_FORD":"FRD", "BOST_LAN":"LAN", "UEDAG": "DAG", "D_A_S":"A_SAMS", "D_B_S":"B_SAMS"}, rvuD)
 rvuF = [r for r in rvuE if r['DAG'] <= 7] # filtrera fram veckodagar.
 rvuG = [r for r in rvuF if not (r['A_P'] == 1 and r['B_P'] == 1 or r['A_P'] == 2 and r['B_P'] == 2 or r['A_P'] == 3 and r['B_P'] == 3)] # filtrera bort rundresor
-
-# Ersätt missing values (NA) med -99
-#rvuE = rvuE.replace(np.nan,-99)
 
 for row in rvuG:
 	row['mode'] = mode_lookup[row['FRD']]
