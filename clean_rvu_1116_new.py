@@ -8,10 +8,12 @@ import math
 UNKNOWN = -99
 
 def runAsserts():
-	assert ConvertToMinutes(-99) == -99
+
+	assert ConvertToMinutes(99) == 99
+	assert ConvertToMinutes(UNKNOWN) == UNKNOWN
 	assert ConvertToMinutes(100) == 60
 	assert ConvertToMinutes(130) == 90
-	assert ConvertToMinutes(2400) == -99
+	assert ConvertToMinutes(2400) == UNKNOWN
 
 	rows = [{'A':1}, {'A':1}, {'A':2}]
 	assert groupBy(rows,['A']) == {'1':[{'A':1},{'A':1}], '2':[{'A':2}]}
