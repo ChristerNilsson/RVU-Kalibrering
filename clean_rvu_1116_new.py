@@ -4,6 +4,7 @@
 import pandas as pd
 import json
 import math
+import numpy as np
 
 UNKNOWN = -99
 
@@ -73,7 +74,7 @@ def CreateDiary(trip_list):
 		'b_kl': trip_list[0]['b_kl'],
 		'end_tour': '',
 		'DAG': trip_list[0]['DAG'],
-		'weight': trip_list[0]['VIKT_DAG'],
+		'weight': trip_list[0]['VIKT'],
 		'UENR': trip_list[0]['UENR'],
 	}
 
@@ -105,7 +106,7 @@ def CreateDiary(trip_list):
 			'b_kl': trip_end,
 			'end_tour' : end_tour,
 			'DAG': row['DAG'],
-			'weight': row['VIKT_DAG'],
+			'weight': row['VIKT'],
 			'UENR': row['UENR'],
 		}
 		activities.append(trip)
@@ -124,7 +125,7 @@ def CreateDiary(trip_list):
 			'b_kl': act_start,
 			'end_tour' : end_tour,
 			'DAG': row['DAG'],
-			'weight': row['VIKT_DAG'],
+			'weight': row['VIKT'],
 			'UENR': row['UENR'],
 		}
 		activities.append(act)
@@ -191,7 +192,7 @@ def renameColumns(trans, rows):
 def replaceNA(rvu):
 	for row in rvu:
 		for key in row:
-			if key == 'VIKT_DAG':
+			if key == 'VIKT':
 				row[key] = round(row[key], 3)
 			else:
 				row[key] = UNKNOWN if math.isnan(row[key]) else round(row[key])
@@ -288,7 +289,8 @@ koder = root + settings['koder']
 skiprows = settings['skiprows']
 nrows = settings['nrows']
 
-mode_codes = pd.read_csv(koder + "fm_kod.txt", sep='\t')
+dtype = {'id': np.int32}
+mode_codes = pd.read_csv(koder + "fm_kod.txt", sep='\t', dtype = dtype )
 mode_lookup = dict(zip(mode_codes["id"], mode_codes["grp"]))
 
 purpose_codes = pd.read_csv(koder + "ärende_kod_gen.txt", sep='\t')
@@ -305,7 +307,10 @@ work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
 runAsserts()
 
-cols = "UENR,BOST_LAN,D_ARE,D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
+cols = "Lopnr,UENR,AR,Manad,DAG,HNR,DNR,BOSAMS,S_KL,SP,S_SAMS,SV1,M_KL,MP,M_SAMS,SV2,HAR,DAR,FRD,KM,TID,H_ANT,H_ANT_DR,H_BARNN,H_BARNV,H_ENKEL,H_ENSAM,H_FORDON,H_PERS,D_PERS,FRD_agg,HAR_agg,DAR_agg,ID,Zon_a,Zon_b,KORKORT,Vikt,Noll,SP1_MP1".split(',')
+
+#cols = "UENR,BOST_LAN,D_ARE,D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
+#cols = "UENR,HAR,FRD,S_KL,M_KL,DAG,Vikt,BOSAMS,S_SAMS,M_SAMS,SV1,SV2,SP,MP,HAR_agg".split(',')
 rvuA = pd.read_csv(rvu_input, usecols=cols, nrows=nrows, skiprows=range(1,skiprows))
 rvuB = rvuA.to_dict('records')
 rvuB = replaceNA(rvuB)
@@ -315,22 +320,31 @@ rvuB = replaceNA(rvuB)
 # I RVU:erna är skola ett ärende, medan Sampers skiljer på skola för olika åldersgrupper. Här använder vi samma uppdelning som i skattningen, dvs i tre grupper: Grundskola för åldrarna 6-15 år, gymnasium för 16-18 år och vuxenutbildning för 19 år och uppåt.
 # Read and define lookup tables for survey codes
 
-rvuC = [r for r in rvuB if r['D_A_SVE'] == 1 and r['D_B_SVE'] == 1] # filtera bort utrikesresor
+rvuC = [r for r in rvuB if r['SV1'] == 1 and r['SV2'] == 1] # filtera bort utrikesresor
 
-cols = 'UENR,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_FORD,D_ARE,D_A_PKT,D_B_PKT,D_A_KL,D_B_KL,BOST_LAN'.split(',')
-rvuD = pickColumns(cols, rvuC)
-rvuE = renameColumns({"D_A_KL":"A_KL", "D_B_KL":"B_KL", "D_A_PKT":"A_P", "D_B_PKT":"B_P", "D_ARE":"ARE", "D_FORD":"FRD", "BOST_LAN":"LAN", "UEDAG": "DAG", "D_A_S":"A_SAMS", "D_B_S":"B_SAMS"}, rvuD)
+#cols = 'UENR,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_FORD,D_ARE,D_A_PKT,D_B_PKT,D_A_KL,D_B_KL,BOST_LAN'.split(',')
+#rvuD = pickColumns(cols, rvuC)
+rvuE = renameColumns({"S_KL":"A_KL", "M_KL":"B_KL", "SP":"A_P", "MP":"B_P", "S_SAMS":"A_SAMS", "M_SAMS":"B_SAMS", "Vikt":"VIKT"}, rvuC) # "DAG": "DAG", "FRD":"FRD",
 rvuF = [r for r in rvuE if r['DAG'] <= 7] # filtrera fram veckodagar.
 rvuG = [r for r in rvuF if not (r['A_P'] == 1 and r['B_P'] == 1 or r['A_P'] == 2 and r['B_P'] == 2 or r['A_P'] == 3 and r['B_P'] == 3)] # filtrera bort rundresor
 
 for row in rvuG:
+	#print(row['UENR'])
 	row['mode'] = mode_lookup[row['FRD']]
-	row["purpose"] = purpose_lookup[row["ARE"]]
+
+	#row["purpose"] = row["HAR"] #purpose_lookup[row["ARE"]]
+	row["purpose"] = row["HAR_agg"] #purpose_lookup[row["ARE"]]
+	#row["purpose"] = purpose_lookup[row["ARE"]]
+
 	row["a_p"] = place_lookup[row["A_P"]]
 	row["b_p"] = place_lookup[row["B_P"]]
 	row['a_kl'] = row["A_KL"]
 	row['b_kl'] = row["B_KL"]
-	row["region"] = region_lookup[row["LAN"]]
+	row['LAN'] = row['BOSAMS']//1000000
+	if row["LAN"] == -1:
+		row["region"] = -1
+	else:
+		row["region"] = region_lookup[row["LAN"]]
 
 rvuH = groupBy(rvuG, ['UENR'])
 

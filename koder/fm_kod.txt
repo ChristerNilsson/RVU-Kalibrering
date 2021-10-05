@@ -62,5 +62,6 @@ id	grp	beskrivning
 517	pass	Annan bil
 518	pass	Arbetsgivarens bil
 519	pass	Personbil, passagerare. Ägandeform okänd
-555	övr	Annat färdsätt 
+555	övr	Annat färdsätt
+-1	fel
 -99	fel	miss
