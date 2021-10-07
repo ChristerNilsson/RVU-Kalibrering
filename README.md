@@ -7,13 +7,16 @@ Denna fil är personlig och ligger inte på github.
 ```
 {
     "root"       : "C:/github/RVU-kalibrering/",
-        "input"      : "indata/",
-            "rvu"       : "rvu_100_15.csv",
+        "input"      : "input/",
+            "xxxrvu" : "mddr_121400_414.csv",
+            "rvu"    : "skane_sundet_100_14.csv",
         "koder"      : "koder/",
-        "output"     : "utdata/",
+            "xxxregion" : "SAMM/",
+            "region" : "Syd/",
+        "output"     : "output/",
 
     "skiprows"       : 0,
-    "nrows"          : 1000000,
+    "nrows"          : 1000000
 
 }
 ```

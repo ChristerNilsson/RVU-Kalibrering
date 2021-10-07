@@ -1,0 +1,12 @@
+id	grp	beskrivning
+1	Arbete	Arbete
+2	Skola	Skola
+3	Tjänste	Tjänsteresa
+4	SHB	hämta/lämna barn
+5	Daglig	Inköp
+6	SHB	Hälso och sjukvård
+7	Rekr	Motion
+8	Släkt	nöje/Släkt och vänner
+9	Övriga	Annat ärende
+10	Övriga	till bostaden
+-99	fel	missing

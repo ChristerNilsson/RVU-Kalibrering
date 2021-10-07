@@ -8,8 +8,8 @@ import numpy as np
 import pydash as _
 import operator
 
-#ÄRENDE = "D_ARE"
-ÄRENDE = "D_AREALL"
+ÄRENDE = "D_ARE"
+#ÄRENDE = "D_AREALL"
 
 UNKNOWN = -99
 
@@ -39,11 +39,11 @@ def runAsserts():
 	assert mode_lookup[1] == 'gång'
 	assert mode_lookup[2] == 'cykel'
 
-	assert purpose_lookup[2] == 'Arbete'
-	assert purpose_lookup[3] == 'Skola'
+	# assert purpose_lookup[2] == 'Arbete'
+	# assert purpose_lookup[3] == 'Skola'
 
-	assert place_lookup[2] == 'bostad_ovr'
-	assert place_lookup[3] == 'bostad_fri'
+	# assert place_lookup[2] == 'bostad_ovr'
+	# assert place_lookup[3] == 'bostad_fri'
 
 	assert region_lookup[1] == 'SAMM'
 	assert region_lookup[14] == 'Väst'
@@ -64,7 +64,7 @@ def CreateDiary(trip_list):
 
 	idx = 1
 	tour = 1
-	day_type = trip_list[0]['a_p'] + '->' + trip_list[-1]['b_p']
+	day_type = str(trip_list[0]['a_p']) + '->' + str(trip_list[-1]['b_p'])
 
 	# First, create a morning activity, wherever the person starts their morning (usually at home, sometimes somewhere else)
 	at_home_morning = {
@@ -223,7 +223,7 @@ def replaceNA(rvu):
 			if key == 'VIKT_DAG':
 				row[key] = round(row[key], 3)
 			else:
-				row[key] = UNKNOWN if math.isnan(row[key]) else round(row[key])
+				if row[key] == "NA": row[key] = UNKNOWN # if math.isnan(row[key]) else round(row[key])
 	return rvu
 
 def TourProperties(tour_diary):
@@ -531,24 +531,26 @@ rvu_input = input + settings['rvu']
 tour_arb_output = output + "tour_arb.csv"
 tour_WB_output = output + "tour_WB.csv"
 koder = root + settings['koder']
+region = koder + settings['region']
 skiprows = settings['skiprows']
 nrows = settings['nrows']
 
 dtype = {'id': np.int32}
-mode_codes = pd.read_csv(koder + "fm_kod.txt", sep='\t', dtype = dtype )
-mode_lookup = dict(zip(mode_codes["id"], mode_codes["grp"]))
 
-purpose_codes = pd.read_csv(koder + "ärende_kod_gen.txt", sep='\t', dtype = dtype)
-purpose_lookup = dict(zip(purpose_codes["id"], purpose_codes["grp"]))
-
-place_codes = pd.read_csv(koder + "plats_kod.txt", sep='\t')
-place_lookup = dict(zip(place_codes["id"], place_codes["plats"]))
-
-region_codes = pd.read_csv(koder + "region_kod.txt", sep=',')
+region_codes = pd.read_csv(koder + "region.txt", sep=',')
 region_lookup = dict(zip(region_codes["lkod"], region_codes["region"]))
 
-work_codes = pd.read_csv(koder + "arbete_kod.txt", sep='\t')
+work_codes = pd.read_csv(koder + "arbete.txt", sep='\t')
 work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
+
+mode_codes = pd.read_csv(region + "färdmedel.txt", sep='\t', dtype = dtype )
+mode_lookup = dict(zip(mode_codes["id"], mode_codes["grp"]))
+
+purpose_codes = pd.read_csv(region + "ärende.txt", sep='\t', dtype = dtype)
+purpose_lookup = dict(zip(purpose_codes["id"], purpose_codes["grp"]))
+
+place_codes = pd.read_csv(region + "plats.txt", sep='\t')
+place_lookup = dict(zip(place_codes["id"], place_codes["plats"]))
 
 runAsserts()
 
