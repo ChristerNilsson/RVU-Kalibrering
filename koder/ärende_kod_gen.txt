@@ -28,6 +28,9 @@ id	grp	beskrivning
 35	Digital	Diskussion av frågor som rör studierna
 36	Digital	Surfa utan särskilt ärende
 37	Digital	Ladda ner filer/bilder/dokument/program etc
+46	Privat
+47	Privat
+48	Privat
 55	Övriga	Annat ärende
 80	Arbete	Arbete (UP:s ordinarie arbetsplats)
 81	Arbete	Arbete (ej UP:s ordinarie arbetsplats)
@@ -39,4 +42,39 @@ id	grp	beskrivning
 97	Tjänste	Yrkesmässig trafik på väg
 98	Tjänste	Besättningsresa
 99	Övriga	Felkodad?
+141	Tjänste
+142	Tjänste
+143	Tjänste
+144	Tjänste
+145	Tjänste
+146	Tjänste
+147	Tjänste
+148	Tjänste
+149	Tjänste
+150	Tjänste
+151	Tjänste
+152	Tjänste
+153	Tjänste
+154	Tjänste
+155	Tjänste
+156	Tjänste
+157	Tjänste
+161	Skola
+162	Skola
+163	Skola
+164	Skola
+165	Skola
+166	Skola
+167	Skola
+168	Skola
+169	Skola
+170	Skola
+171	Skola
+172	Skola
+173	Skola
+174	Skola
+175	Skola
+207	Okand
+225	Okand
+-1	fel
 -99	fel	missing
