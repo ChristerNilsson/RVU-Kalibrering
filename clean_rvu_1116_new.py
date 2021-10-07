@@ -8,6 +8,9 @@ import numpy as np
 import pydash as _
 import operator
 
+#ÄRENDE = "D_ARE"
+ÄRENDE = "D_AREALL"
+
 UNKNOWN = -99
 
 def runAsserts():
@@ -549,7 +552,7 @@ work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
 
 runAsserts()
 
-cols = "UENR,UEDAG,BOST_LAN,D_ARE,D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
+cols = f"UENR,UEDAG,BOST_LAN,{ÄRENDE},D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
 rvuA = pd.read_csv(rvu_input, usecols=cols, nrows=nrows, skiprows=range(1,skiprows))
 rvuB = rvuA.to_dict('records')
 rvuB = replaceNA(rvuB)
@@ -560,7 +563,7 @@ rvuB = replaceNA(rvuB)
 # Read and define lookup tables for survey codes
 
 rvuC = [r for r in rvuB if r['D_A_SVE'] == 1 and r['D_A_SVE'] == 1] # filtera bort utrikesresor
-rvuE = renameColumns({"D_A_KL":"A_KL", "D_B_KL":"B_KL", "D_A_PKT":"A_P", "D_B_PKT":"B_P", "D_ARE":"ARE", "D_FORD":"FRD", "BOST_LAN":"LAN", "UEDAG": "DAG", "D_A_S":"A_SAMS", "D_B_S":"B_SAMS","VIKT_DAG":"VIKT"}, rvuC)
+rvuE = renameColumns({"D_A_KL":"A_KL", "D_B_KL":"B_KL", "D_A_PKT":"A_P", "D_B_PKT":"B_P", f'{ÄRENDE}':"ARE", "D_FORD":"FRD", "BOST_LAN":"LAN", "UEDAG": "DAG", "D_A_S":"A_SAMS", "D_B_S":"B_SAMS","VIKT_DAG":"VIKT"}, rvuC)
 rvuF = [r for r in rvuE if r['DAG'] <= 7] # filtrera fram veckodagar.
 rvuG = [r for r in rvuF if not (r['A_P'] == 1 and r['B_P'] == 1 or r['A_P'] == 2 and r['B_P'] == 2 or r['A_P'] == 3 and r['B_P'] == 3)] # filtrera bort rundresor
 

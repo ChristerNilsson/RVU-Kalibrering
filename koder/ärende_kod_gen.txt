@@ -75,6 +75,7 @@ id	grp	beskrivning
 174	Skola
 175	Skola
 207	Okand
+224	Okand
 225	Okand
 -1	fel
 -99	fel	missing
