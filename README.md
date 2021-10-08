@@ -6,17 +6,9 @@ Denna fil är personlig och ligger inte på github.
 
 ```
 {
-    "root"       : "C:/github/RVU-kalibrering/",
-        "input"      : "input/",
-            "xxxrvu" : "mddr_121400_414.csv",
-            "rvu"    : "skane_sundet_100_14.csv",
-        "koder"      : "koder/",
-            "xxxregion" : "SAMM/",
-            "region" : "Syd/",
-        "output"     : "output/",
-
+    "projekt"        : "C:/github/RVU-kalibrering/SAMM_121400_15/",
+    "xprojekt"       : "C:/github/RVU-kalibrering/Syd_Skane-sundet_100_13/",
     "skiprows"       : 0,
     "nrows"          : 1000000
-
 }
 ```

@@ -16,10 +16,10 @@ UNKNOWN = -99
 def runAsserts():
 
 	assert ConvertToMinutes(99) == 99
-	assert ConvertToMinutes(UNKNOWN) == UNKNOWN
+	#assert ConvertToMinutes(UNKNOWN) == UNKNOWN
 	assert ConvertToMinutes(100) == 60
 	assert ConvertToMinutes(130) == 90
-	assert ConvertToMinutes(2400) == UNKNOWN
+	#assert ConvertToMinutes(2400) == UNKNOWN
 
 	rows = [{'A':1}, {'A':1}, {'A':2}]
 	assert groupBy(rows,['A']) == {'1':[{'A':1},{'A':1}], '2':[{'A':2}]}
@@ -52,7 +52,7 @@ def runAsserts():
 	assert work_lookup[4] == 'övrigt'
 
 def ConvertToMinutes(t):
-	if t >= 2400 or t == UNKNOWN: return UNKNOWN
+	if t == 'NA' or t >= 2400: return -99
 	hour = t // 100
 	minute = t % 100
 	return 60 * hour + minute
@@ -140,7 +140,10 @@ def CreateDiary(trip_list):
 			tour += 1
 
 	for row in activities:
-		row['dur'] = ConvertToMinutes(row['b_kl']) - ConvertToMinutes(row['a_kl'])
+		if row['a_kl'] == 'NA' or row['b_kl'] == 'NA':
+			row['dur'] = 1000
+		else:
+			row['dur'] = ConvertToMinutes(row['b_kl']) - ConvertToMinutes(row['a_kl'])
 	return activities
 
 def freq (arr):
@@ -153,18 +156,18 @@ def freq (arr):
 def ToTimestep(minutes): return minutes // 30 # Gör om tid-från-midnatt till tidsperiod
 
 def RangeFromStartEnd(start, end):
-  ranges = []
-  s = ToTimestep(start)
-  e = 1 + ToTimestep(end)
-  if e <= s:
-    # Special case when activity crosses midnight
-    e_m = 1 + ToTimestep(24 * 60 - 1)
-    s_m = ToTimestep(24*60)
-    ranges.append(range(s, e_m))
-    ranges.append(range(s_m, e))
-  else:
-    ranges.append(range(s,e))
-  return ranges
+	ranges = []
+	s = ToTimestep(start)
+	e = 1 + ToTimestep(end)
+	if e <= s:
+		# Special case when activity crosses midnight
+		e_m = 1 + ToTimestep(24 * 60 - 1)
+		s_m = ToTimestep(24*60)
+		ranges.append(range(s, e_m))
+		ranges.append(range(s_m, e))
+	else:
+		ranges.append(range(s,e))
+	return ranges
 
 def groupBy(arr, cols):
 	result = {}
@@ -176,6 +179,12 @@ def groupBy(arr, cols):
 		else:
 			result[value].append(row)
 	return result
+
+def makeLookup(filename,a,b) :
+	codes = pd.read_csv(koder + filename)
+	d = dict(zip(codes[a], codes[b]))
+	d['NA'] = 'NA'
+	return d
 
 def ModeHierarchy(modes):
 	""" Färdmedelshierarki enl Staffan Algers modifierat så att tåg ingår i koll indata: en lista av alla fm under resan utdata: huvudfm """
@@ -201,6 +210,35 @@ def ModeRecoded(mode):
 	elif mode == 'gång': return 'gång'
 	else: return 'övrigt'
 
+#def myCSV(filename, cols, types):
+	# result = []
+	# with open(filename) as f:
+	# 	rows = f.readlines()
+	# 	header = rows[0].rstrip().split(',')
+	# 	print(header)
+	# 	indexes = [header.index(col) for col in cols]
+	# 	print(indexes)
+	# 	rows = [row.rstrip().split(',') for row in rows[1:]]
+	# 	for row in rows:
+	# 		n = len(cols)
+	# 		sow = [''] * n
+	# 		for i in range(n):
+	# 			index = indexes[i]
+	# 			sow[i] = row[index]
+	# 			print(row[1],i,index,sow[i])
+	# 			if types[i] == '1': sow[i] = int(sow[i])   if sow[i] != 'NA' else 'NA'
+	# 			if types[i] == '.': sow[i] = float(sow[i]) if sow[i] != 'NA' else 'NA'
+	# 		result.append(_.zip_object(cols,sow))
+#	return result
+
+def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
+	for row in rows:
+		for i in range(len(cols)):
+			col = cols[i]
+			if types[i] == '1': row[col] = int(row[col])   if row[col] != 'NA' else 'NA'
+			if types[i] == '.': row[col] = float(row[col]) if row[col] != 'NA' else 'NA'
+	return rows
+
 def pickColumns(cols, rows):
 	result = []
 	for r in rows:
@@ -220,10 +258,7 @@ def renameColumns(trans, rows):
 def replaceNA(rvu):
 	for row in rvu:
 		for key in row:
-			if key == 'VIKT_DAG':
-				row[key] = round(row[key], 3)
-			else:
-				if row[key] == "NA": row[key] = UNKNOWN # if math.isnan(row[key]) else round(row[key])
+			if row[key] == "NA": row[key] = UNKNOWN
 	return rvu
 
 def TourProperties(tour_diary):
@@ -334,8 +369,8 @@ def WB_TourProperties(tour_diary):
 	# times_ok = from_ok and to_ok
 
 	#lista = [tour['a_kl'] for tour in tour_diary]
-	times_ok =              _.is_monotone([tour['a_kl'] for tour in tour_diary], operator.le)
-	times_ok = times_ok and _.is_monotone([tour['b_kl'] for tour in tour_diary], operator.le)
+	#times_ok =              _.is_monotone([tour['a_kl'] for tour in tour_diary], operator.le)
+	##times_ok = times_ok and _.is_monotone([tour['b_kl'] for tour in tour_diary], operator.le)
 	times_ok = True
 	#is_monotone([1, 1, 2, 3], operator.le)
 
@@ -524,40 +559,36 @@ def WB_TourProperties(tour_diary):
 	return tour
 
 with open('settings.json') as f: settings = json.load(f)
-root = settings['root']
-input = root + settings['input']
-output = root + settings['output']
-rvu_input = input + settings['rvu']
-tour_arb_output = output + "tour_arb.csv"
-tour_WB_output = output + "tour_WB.csv"
-koder = root + settings['koder']
-region = koder + settings['region']
+projekt = settings['projekt']
+koder = projekt + 'koder/'
 skiprows = settings['skiprows']
 nrows = settings['nrows']
 
-dtype = {'id': np.int32}
-
-region_codes = pd.read_csv(koder + "region.txt", sep=',')
-region_lookup = dict(zip(region_codes["lkod"], region_codes["region"]))
-
-work_codes = pd.read_csv(koder + "arbete.txt", sep='\t')
-work_lookup = dict(zip(work_codes["kod"], work_codes["status"]))
-
-mode_codes = pd.read_csv(region + "färdmedel.txt", sep='\t', dtype = dtype )
-mode_lookup = dict(zip(mode_codes["id"], mode_codes["grp"]))
-
-purpose_codes = pd.read_csv(region + "ärende.txt", sep='\t', dtype = dtype)
-purpose_lookup = dict(zip(purpose_codes["id"], purpose_codes["grp"]))
-
-place_codes = pd.read_csv(region + "plats.txt", sep='\t')
-place_lookup = dict(zip(place_codes["id"], place_codes["plats"]))
+region_lookup = makeLookup("region.txt",'lkod','region')
+work_lookup = makeLookup("arbete.txt",'kod','status')
+mode_lookup = makeLookup("färdmedel.txt",'id','grp')
+purpose_lookup = makeLookup("ärende.txt",'id','grp')
+place_lookup = makeLookup("plats.txt",'id','plats')
 
 runAsserts()
 
-cols = f"UENR,UEDAG,BOST_LAN,{ÄRENDE},D_FORD,D_A_KL,D_B_KL,UEDAG,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
-rvuA = pd.read_csv(rvu_input, usecols=cols, nrows=nrows, skiprows=range(1,skiprows))
+cols = f"UENR,UEDAG,BOST_LAN,{ÄRENDE},D_FORD,D_A_KL,D_B_KL,VIKT_DAG,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
+types = '1111111.1111111'
+
+converters = {}
+for col in cols: converters[col] = lambda x : x # leave every cell as a string
+
+rvuA = pd.read_csv(projekt + 'rvu.csv', usecols=cols, nrows=nrows, skiprows=range(1,skiprows),converters = converters)
 rvuB = rvuA.to_dict('records')
-rvuB = replaceNA(rvuB)
+rvuC = changeTypes(rvuB,cols,types)
+
+#rvuB = myCSV(projekt + 'rvu.csv', cols, '1111111.1111111')
+#dtype = {'id': np.int32}
+# for col in ['D_A_KL', 'D_B_KL', 'D_A_SVE']:
+# 	rvuA[col] = pd.to_numeric(rvuA[col], errors='coerce')
+#rvuA['D_A_KL'] = rvuA['D_A_KL'].astype(pd.Int64Dtype())
+#rvuA['D_B_KL'] = rvuA['D_B_KL'].astype(pd.Int64Dtype())
+#rvuB = replaceNA(rvuB)
 
 # Koda om färdmedel, ärende etc
 # Vi kodar om resvaneundersökningens sifferkoder för till exempel färdmedel till de grupperade färdmedel som används i Sampers. Detsamma görs för ärende, plats (dvs bostad, arbetsplats, skola, annat). Vi kodar också på Sampers-region istället för län så att vi kan titta på eventuella skillnader mellan regionerna senare.
@@ -601,7 +632,7 @@ rvuL = [TourProperties(rvuK[group]) for group in rvuK]
 rvuM = pickColumns(cols, rvuL)
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(tour_arb_output, index=False, columns=cols)
+	ttdf_arb.to_csv(projekt + 'bked.csv', index=False, columns=cols) # bostadsbaserat
 
 #cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB,activity_range,trip_range,main_trip_range,outbound_range,inbound_range'.split(',')
 cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB'.split(',')
@@ -611,4 +642,4 @@ rvuL = [WB_TourProperties(rvuK[group]) for group in rvuK]
 rvuM = pickColumns(cols, rvuL)
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(tour_WB_output, index=False, columns=cols)
+	ttdf_arb.to_csv(projekt + 'aked.csv', index=False, columns=cols) # arbetsplatsbaserat

@@ -1,4 +1,0 @@
-id	plats	beskrivning
-1	bostad	BOSTAD
-2	annat	ej BOSTD
--99	null	missing value
