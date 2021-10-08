@@ -1,0 +1,14 @@
+id,plats,beskrivning
+1,bostad,UP:s BOSTAD folkbokföringsadress:  <Adress>
+2,bostad_ovr,ANNAN PERMANENT BOSTAD <(REGEMENTE för värnpliktiga)>
+3,bostad_fri,<UP:s (HUVUDSAKLIGA) FRITIDSBOSTAD adress:>
+4,arbete,<UP:s (HUVUD)ARBETSPLATS (endast arbetsplats i Sverige) adress: /PLATS DÄR UP DELTAR I "ARBETSMARKNADSPOLITISKA ÅTGÄRDER"  MED ADRESS:  adressuppgift>
+5,arbete,UP:s ARBETSPLATS 2 3 etc samt ARBETSPLATS UTOMLANDS
+6,skola,<UP:s (HUVUDSAKLIGA) SKOLA med adress: > 
+7,annat,TILLFÄLLIG ÖVERNATTNINGSPLATS
+8,skola,UP:s SKOLA 2 3 etc ANNAN SKOLA PRAKTIKPLATS E.D. 
+9,annat,UP:s FRITIDSBOSTAD ÄVEN HYRD (dit vi inte har fått adressen tidigare)
+10,annat,<ANNAN PLATS>
+88,null,Vet ej 
+99,null,Inget svar 
+-99,null,missing value 
