@@ -57,7 +57,7 @@ def ConvertToMinutes(t):
 	minute = t % 100
 	return 60 * hour + minute
 
-def CreateDiary(trip_list):
+def CreateDiary(trip_list,typ): # typ = 'bostad' eller 'arbete'
 	## ToDo: Identify work based tours
 
 	if len(trip_list) == 0: return []
@@ -94,8 +94,15 @@ def CreateDiary(trip_list):
 		# Identify trips that end up at home
 		purpose = row['purpose']
 		end_tour = False
-		if row['b_p'] == 'bostad':
-			purpose = 'bostad'
+
+		# if row['b_p'] == 'bostad':
+		# 	purpose = 'bostad'
+		# 	end_tour = True
+
+		if row['b_p'] == typ:
+			if typ == 'arbete':
+				print(row['UENR'], row['b_p'], day_type)
+			purpose = typ
 			end_tour = True
 
 		# Add the trip to the diary
@@ -234,9 +241,10 @@ def ModeRecoded(mode):
 def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
 	for row in rows:
 		for i in range(len(cols)):
-			col = cols[i]
-			if types[i] == '1': row[col] = int(row[col])   if row[col] != 'NA' else 'NA'
-			if types[i] == '.': row[col] = float(row[col]) if row[col] != 'NA' else 'NA'
+			cell = row[cols[i]]
+			if types[i] == '1': cell = int(cell)   if cell != 'NA' else 'NA'
+			if types[i] == '.': cell = float(cell) if cell != 'NA' else 'NA'
+			row[cols[i]] = cell
 	return rows
 
 def pickColumns(cols, rows):
@@ -619,9 +627,29 @@ rvuH = groupBy(rvuG, ['UENR'])
 # Vi börjar med att gruppera delresorna per individ. För varje grupp körs funktionen `CreateDiary` som är definierad i filen `create_diary.py`. I den funktionen läggs det in aktiviteter före, mellan och efter delresorna så att hela dagen är fylld av antingen resor eller aktiviteter. Först läggs en hemma-, arbete- eller övrigt-aktivitet till i början, beroende på var individien startar sin dag. Vi noterar den informationen i utdata för att senare kommer vi att sortera bort resor som inte startat och slutat hemma. För varje resa läggs sedan en aktivitet till efter resan som börjar när resan slutar. Ärendet definieras av det ärende som uppgetts för resan. Sluttiden sätts till starttiden för nästa resa. Den sista aktiviteten får sluttid 23.59 utom i de fall då resandet pågår till efter midnatt. Då sätts den sista aktiviteten till en minut efter start.
 # Vi kommer senare att använda den här utökade listan av resor och aktiviteter för att kunna se när olika aktiviteter utförs och för att kunna definiera huvudresans ärende efter vilken aktivitet som är längst i de fall det inte finns någon arbetsresa eller tjänsteresa.
 
+#####################
+
 rvuI = []
 for group in rvuH:
-	lst = CreateDiary(rvuH[group])
+	lst = CreateDiary(rvuH[group],'arbete')
+	for item in lst:
+		rvuI.append(item)
+
+#cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB,activity_range,trip_range,main_trip_range,outbound_range,inbound_range'.split(',')
+cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB'.split(',')
+rvuJ = [r for r in rvuI if r['day_type'] in ['arbete->arbete', 'arbete->bostad', 'arbete->annat', 'arbete->bostad_fri', 'arbete->bostad_ovr']]  # Workbased
+rvuK = groupBy(rvuJ, ['UENR', 'tour'])
+rvuL = [WB_TourProperties(rvuK[group]) for group in rvuK]
+rvuM = pickColumns(cols, rvuL)
+if len(rvuM) > 0:
+	ttdf_arb = pd.DataFrame.from_dict(rvuM)
+	ttdf_arb.to_csv(projekt + 'aked.csv', index=False, columns=cols) # arbetsplatsbaserat
+
+#####################
+
+rvuI = []
+for group in rvuH:
+	lst = CreateDiary(rvuH[group],'bostad')
 	for item in lst:
 		rvuI.append(item)
 
@@ -634,12 +662,3 @@ if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
 	ttdf_arb.to_csv(projekt + 'bked.csv', index=False, columns=cols) # bostadsbaserat
 
-#cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB,activity_range,trip_range,main_trip_range,outbound_range,inbound_range'.split(',')
-cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB'.split(',')
-rvuJ = [r for r in rvuI if r['day_type'] in ['arbete->arbete', 'arbete->bostad', 'arbete->annat', 'arbete->bostad_fri', 'arbete->bostad_ovr']]  # Workbased
-rvuK = groupBy(rvuJ, ['UENR', 'tour'])
-rvuL = [WB_TourProperties(rvuK[group]) for group in rvuK]
-rvuM = pickColumns(cols, rvuL)
-if len(rvuM) > 0:
-	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(projekt + 'aked.csv', index=False, columns=cols) # arbetsplatsbaserat
