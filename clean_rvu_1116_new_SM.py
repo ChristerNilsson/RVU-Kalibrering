@@ -1,8 +1,9 @@
 import pandas as pd
 import json
 import pydash as _
+import time
 
-ÄRENDE = "D_ARE" # "D_AREALL"
+ÄRENDE = 'D_ARE'  # D_ARE eller D_AREALL
 A_P = 'D_A_PKT'
 B_P = 'D_B_PKT'
 
@@ -10,11 +11,11 @@ UNKNOWN = -99
 
 def runAsserts():
 
-	assert ConvertToMinutes(99) == 99
-	#assert ConvertToMinutes(UNKNOWN) == UNKNOWN
-	assert ConvertToMinutes(100) == 60
-	assert ConvertToMinutes(130) == 90
-	#assert ConvertToMinutes(2400) == UNKNOWN
+	assert minutes(99) == 99
+	#assert minutes(UNKNOWN) == UNKNOWN
+	assert minutes(100) == 60
+	assert minutes(130) == 90
+	#assert minutes(2400) == UNKNOWN
 
 	rows = [{'A':1}, {'A':1}, {'A':2}]
 	assert _.group_by(rows,'A') == {1:[{'A':1},{'A':1}], 2:[{'A':2}]}
@@ -55,7 +56,7 @@ def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
 			row[cols[i]] = cell
 	return rows
 
-def ConvertToMinutes(t):
+def minutes(t):
 	if t == 'NA' or t >= 2400: return -99
 	hour = t // 100
 	minute = t % 100
@@ -91,55 +92,78 @@ def ModeRecoded(mode):
 	elif mode == 'gång': return 'gång'
 	else: return 'övrigt'
 
-def findTrip(rows,first,last):
-	row = rows[first]
-	uenr = row['UENR']
-	A_SAMS = row['D_A_S']
-	B_SAMS = row['D_B_S']
-	FRD = mode_lookup[row['D_FORD']]
-	ARE = purpose_lookup[row[ÄRENDE]]
-	return {'UENR':uenr, 'zoneA':A_SAMS, 'zoneB':B_SAMS, 'purpose':ARE, 'mode':FRD}
+def findTrip(rows,first,last,tour): # första Arbete eller första Tjänste eller längsta aktivitet
+	trips = rows[first:last + 1]
+	acts = [t for t in trips if t['purpose'] == 'Arbete']
+
+	modes = [row['mode'] for row in trips]
+	mode = ModeHierarchy(modes)
+	dur = 0
+
+	for t in trips: t['mode'] = ModeRecoded(t['mode'])
+
+	if len(acts) > 0: act = acts[0]
+	else:
+		acts = [t for t in trips if t['purpose'] == 'Tjänste']
+		if len(acts) > 0: act = acts[0]
+		else:
+			if first == last: act = rows[first]
+			else:
+				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in range(first,last)]
+				arr.sort(key=lambda a : a[0])
+				dur,act = arr[-1]
+	result = _.pick(act,'UENR,D_A_S,D_B_S,purpose,mode,VIKT_DAG,BOST_LAN,region'.split(','))
+	result['D_A_S'] = rows[first]['D_A_S']
+	result['mode'] = mode
+	result['tour'] = tour
+	result['dur'] = dur
+	return result
 
 def stateMachine(rows):
 	A = [4, 5]     # arbetsplatser
 	B = [1, 2, 3]  # bostäder
 	a_stack = []
 	b_stack = []
-	for i,row in enumerate(rows):
-		# uenr = row['UENR']
-		# A_SAMS = row['D_A_S']
-		# B_SAMS = row['D_B_S']
-		# FRD = mode_lookup[row['D_FORD']]
-		# ARE = purpose_lookup[row[ÄRENDE]]
-		# if row[A_P] in A: a_stack.append({'UENR':uenr, 'zoneA':A_SAMS, 'zoneB':B_SAMS, 'purpose':ARE, 'mode':FRD})
-		# if row[A_P] in B: b_stack.append({'UENR':uenr, 'zoneA':A_SAMS, 'zoneB':B_SAMS, 'purpose':ARE, 'mode':FRD})
+	a_tour = 1
+	b_tour = 1
+	for i in range(len(rows)):
+		row = rows[i]
 		if row[A_P] in A: a_stack.append(i)
 		if row[A_P] in B: b_stack.append(i)
-		# if row[B_P] in A and len(a_stack) > 0: aked.append(a_stack.pop())
-		# if row[B_P] in B and len(b_stack) > 0: bked.append(b_stack.pop())
-		if row[B_P] in A and len(a_stack) > 0: aked.append(findTrip(rows,a_stack.pop(),i))
-		if row[B_P] in B and len(b_stack) > 0: bked.append(findTrip(rows,b_stack.pop(),i))
+		if row[B_P] in A and len(a_stack) > 0 and a_stack[-1] != i:
+			aked.append(findTrip(rows,a_stack.pop(),i,a_tour))
+			a_tour += 1
+		if row[B_P] in B and len(b_stack) > 0 and b_stack[-1] != i:
+			bked.append(findTrip(rows,b_stack.pop(),i,b_tour))
+			b_tour += 1
+
+start = time.time()
 
 with open('settings.json') as f: settings = json.load(f)
 projekt = settings['projekt']
 koder = projekt + 'koder/'
 
-region_lookup = makeLookup("region.txt",'lkod','region')
-work_lookup = makeLookup("arbete.txt",'kod','status')
-mode_lookup = makeLookup("färdmedel.txt",'id','grp')
+region_lookup  = makeLookup("region.txt",'lkod','region')
+work_lookup    = makeLookup("arbete.txt",'kod','status')
+mode_lookup    = makeLookup("färdmedel.txt",'id','grp')
 purpose_lookup = makeLookup("ärende.txt",'id','grp')
-place_lookup = makeLookup("plats.txt",'id','plats')
+place_lookup   = makeLookup("plats.txt",'id','plats')
 
 runAsserts()
 
-cols = f"VIKT_DAG,UENR,UEDAG,BOST_S,BOST_LAN,{ÄRENDE},D_FORD,D_A_KL,D_B_KL,D_A_S,D_B_S,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',')
+cols = f"VIKT_DAG,D_A_S,D_B_S,UENR,UEDAG,BOST_LAN,{ÄRENDE},D_FORD,D_A_KL,D_B_KL,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',') # BOST_S
 
 converters = {}
 for col in cols: converters[col] = lambda x : x  # leave every cell as a string
 
-rvuA = pd.read_csv(projekt + 'rvu.csv', converters=converters) # usecols=cols,
+rvuA = pd.read_csv(projekt + 'rvu.csv', usecols=cols, converters=converters)
 rvuB = rvuA.to_dict('records')
-rvuC = changeTypes(rvuB,cols,'.111111111111111')
+rvuC = changeTypes(rvuB,cols,'.AA1111111111111')
+
+for r in rvuC:
+	r['purpose'] = purpose_lookup[r[ÄRENDE]]
+	r['mode']    = mode_lookup[r['D_FORD']]
+
 rvuD = [r for r in rvuC if r['D_A_SVE'] == 1 and r['D_A_SVE'] == 1] # filtera bort utrikesresor
 rvuF = [r for r in rvuD if r['UEDAG'] <= 7] # filtrera fram veckodagar.
 rvuG = [r for r in rvuF if not (r[A_P] == 1 and r[B_P] == 1 or r[A_P] == 2 and r[B_P] == 2 or r[A_P] == 3 and r[B_P] == 3)] # filtrera bort rundresor
@@ -154,3 +178,5 @@ for uenr in rvuH: stateMachine(rvuH[uenr])
 
 pd.DataFrame.from_dict(aked).to_csv(projekt + 'aked.csv', index=False)
 pd.DataFrame.from_dict(bked).to_csv(projekt + 'bked.csv', index=False)
+
+print(time.time()-start)

@@ -368,7 +368,7 @@ def WB_TourProperties(tour_diary):
 	for trip in trips:
 		trip['mode'] = ModeRecoded(trip['mode'])
 
-	mainmode_trips = [r for r in trips if r['mode'] == mode]
+	#mainmode_trips = [r for r in trips if r['mode'] == mode]
 
 	# Kollar att turen har monotont stigande avresa/ankomst för alla resor
 	# is_mono = tour_diary[['start_time', 'end_time']].apply(lambda x: x.is_monotonic_increasing, axis=0)
