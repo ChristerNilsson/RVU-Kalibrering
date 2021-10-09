@@ -643,7 +643,7 @@ rvuL = [WB_TourProperties(rvuK[group]) for group in rvuK]
 rvuM = pickColumns(cols, rvuL)
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(projekt + 'aked.csv', index=False, columns=cols) # arbetsplatsbaserat
+	ttdf_arb.to_csv(projekt + 'aked_new.csv', index=False, columns=cols) # arbetsplatsbaserat
 
 #####################
 
@@ -660,5 +660,5 @@ rvuL = [TourProperties(rvuK[group]) for group in rvuK]
 rvuM = pickColumns(cols, rvuL)
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(projekt + 'bked.csv', index=False, columns=cols) # bostadsbaserat
+	ttdf_arb.to_csv(projekt + 'bked_new.csv', index=False, columns=cols) # bostadsbaserat
 
