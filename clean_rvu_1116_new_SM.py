@@ -94,7 +94,6 @@ def ModeHierarchy(modes):
 
 def findTrip(rows,first,last,exclude,tour,parts): # första Arbete eller första Tjänste eller längsta aktivitet
 	include = [i for i in range(first,last+1) if i not in exclude]
-	#trips = rows[first:last + 1]
 	trips = [rows[i] for i in include]
 	acts = [t for t in trips if t['purpose'] == 'Arbete']
 
@@ -106,20 +105,17 @@ def findTrip(rows,first,last,exclude,tour,parts): # första Arbete eller första
 		acts = [t for t in trips if t['purpose'] == 'Tjänste']
 		if len(acts) > 0: act = acts[0]
 		else:
-			#if first == last: act = rows[first]
 			if len(include) == 1: act = rows[include[0]]
 			else:
-				if include[-1] == last:
-					include.pop()
-				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in include] # range(first,last)]
+				if include[-1] == last: include.pop()
+				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in include]
 				arr.sort(key=lambda a : a[0])
 				dur,act = arr[-1]
 	result = _.pick(act,'UENR,D_A_S,D_B_S,purpose,mode,VIKT_DAG,BOST_LAN,region'.split(','))
 	result['D_A_S'] = rows[first]['D_A_S']
 	result['mode'] = mode
 	result['tour'] = tour
-	if "1" in options or "2" in options:
-		result['parts'] = parts
+	result['parts'] = parts
 	return result
 
 def stateMachine(rows):
@@ -130,7 +126,7 @@ def stateMachine(rows):
 	a_tour = 1
 	b_tour = 1
 
-	exclude = []
+	exclude = [] # samla in alla index inblandade i arbetsbaserade resor.
 	for i in range(len(rows)):
 		row = rows[i]
 		if row[A_P] in A: a_stack.append(i)
