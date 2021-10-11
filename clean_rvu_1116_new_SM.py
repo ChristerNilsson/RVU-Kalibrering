@@ -12,10 +12,10 @@ UNKNOWN = -99
 def runAsserts():
 
 	assert minutes(99) == 99
-	#assert minutes(UNKNOWN) == UNKNOWN
+	assert minutes(UNKNOWN) == UNKNOWN
 	assert minutes(100) == 60
 	assert minutes(130) == 90
-	#assert minutes(2400) == UNKNOWN
+	assert minutes(2400) == UNKNOWN
 
 	rows = [{'A':1}, {'A':1}, {'A':2}]
 	assert _.group_by(rows,'A') == {1:[{'A':1},{'A':1}], 2:[{'A':2}]}
@@ -24,13 +24,9 @@ def runAsserts():
 	assert ModeHierarchy(['gång','gång','cykel']), 'cykel'
 	assert ModeHierarchy(['ånglok','sparkcykel']), 'övrigt'
 
-	assert ModeRecoded('gång') == 'gång'
-	assert ModeRecoded('buss') == 'koll'
-	assert ModeRecoded('sparkcykel') == 'övrigt'
-
-	rows = [{'A':1, 'B':2, 'C':3}, {'A':4, 'B':5, 'C':6}]
-	#assert pickColumns(['A','C'],rows) == [{'A':1, 'C':3}, {'A':4, 'C':6}]
-	#assert renameColumns({'A':'Adam','C':'Cesar'},rows) == [{'Adam':1, 'B':2, 'Cesar':3}, {'Adam':4, 'B':5, 'Cesar':6}]
+	# assert ModeRecoded('gång') == 'gång'
+	# assert ModeRecoded('buss') == 'koll'
+	# assert ModeRecoded('sparkcykel') == 'övrigt'
 
 	assert mode_lookup[1] == 'gång'
 	assert mode_lookup[2] == 'cykel'
@@ -51,13 +47,14 @@ def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
 	for row in rows:
 		for i in range(len(cols)):
 			cell = row[cols[i]]
-			if types[i] == '1': cell = int(cell)   if cell != 'NA' else 'NA'
-			if types[i] == '.': cell = float(cell) if cell != 'NA' else 'NA'
+			if cell == 'NA': continue
+			if types[i] == '1': cell = int(cell)
+			if types[i] == '.': cell = float(cell)
 			row[cols[i]] = cell
 	return rows
 
 def minutes(t):
-	if t == 'NA' or t >= 2400: return -99
+	if t == 'NA' or t == UNKNOWN or t >= 2400: return UNKNOWN
 	hour = t // 100
 	minute = t % 100
 	return 60 * hour + minute
@@ -80,27 +77,26 @@ def ModeHierarchy(modes):
 	elif 'gång' in modes: return 'gång'
 	else: return 'övrigt'
 
-def ModeRecoded(mode):
-	"""Kodar om tåg, tbana etc till koll"""
-	if mode == 'tåg': return 'koll'
-	elif mode == 'tbana': return 'koll'
-	elif mode == 'spv': return 'koll'
-	elif mode == 'buss': return 'koll'
-	elif mode == 'bil': return 'bil'
-	elif mode == 'pass': return 'pass'
-	elif mode == 'cykel': return 'cykel'
-	elif mode == 'gång': return 'gång'
-	else: return 'övrigt'
+# def ModeRecoded(mode):
+# 	"""Kodar om tåg, tbana etc till koll"""
+# 	if mode == 'tåg': return 'koll'
+# 	elif mode == 'tbana': return 'koll'
+# 	elif mode == 'spv': return 'koll'
+# 	elif mode == 'buss': return 'koll'
+# 	elif mode == 'bil': return 'bil'
+# 	elif mode == 'pass': return 'pass'
+# 	elif mode == 'cykel': return 'cykel'
+# 	elif mode == 'gång': return 'gång'
+# 	else: return 'övrigt'
 
-def findTrip(rows,first,last,tour): # första Arbete eller första Tjänste eller längsta aktivitet
+acc = 0
+
+def findTrip(rows,first,last,tour,parts): # första Arbete eller första Tjänste eller längsta aktivitet
 	trips = rows[first:last + 1]
 	acts = [t for t in trips if t['purpose'] == 'Arbete']
 
 	modes = [row['mode'] for row in trips]
 	mode = ModeHierarchy(modes)
-	dur = 0
-
-	for t in trips: t['mode'] = ModeRecoded(t['mode'])
 
 	if len(acts) > 0: act = acts[0]
 	else:
@@ -116,26 +112,35 @@ def findTrip(rows,first,last,tour): # första Arbete eller första Tjänste elle
 	result['D_A_S'] = rows[first]['D_A_S']
 	result['mode'] = mode
 	result['tour'] = tour
-	result['dur'] = dur
+	result['parts'] = parts
 	return result
 
 def stateMachine(rows):
+	global acc
+	start = time.time()
+
 	A = [4, 5]     # arbetsplatser
 	B = [1, 2, 3]  # bostäder
 	a_stack = []
 	b_stack = []
 	a_tour = 1
 	b_tour = 1
+
 	for i in range(len(rows)):
 		row = rows[i]
 		if row[A_P] in A: a_stack.append(i)
 		if row[A_P] in B: b_stack.append(i)
 		if row[B_P] in A and len(a_stack) > 0 and a_stack[-1] != i:
-			aked.append(findTrip(rows,a_stack.pop(),i,a_tour))
+			aked.append(findTrip(rows,a_stack.pop(),i,a_tour,2))
 			a_tour += 1
 		if row[B_P] in B and len(b_stack) > 0 and b_stack[-1] != i:
-			bked.append(findTrip(rows,b_stack.pop(),i,b_tour))
+			bked.append(findTrip(rows,b_stack.pop(),i,b_tour,2))
 			b_tour += 1
+
+	# if len(a_stack) > 0: aked.append(findTrip(rows,a_stack.pop(),len(rows)-1,a_tour))
+	if len(b_stack) > 0: bked.append(findTrip(rows,b_stack.pop(),len(rows)-1,b_tour,1))
+
+	acc += time.time()-start
 
 start = time.time()
 
@@ -180,3 +185,4 @@ pd.DataFrame.from_dict(aked).to_csv(projekt + 'aked.csv', index=False)
 pd.DataFrame.from_dict(bked).to_csv(projekt + 'bked.csv', index=False)
 
 print(time.time()-start)
+print(acc)

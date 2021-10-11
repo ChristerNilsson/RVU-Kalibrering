@@ -3,6 +3,7 @@
 
 import pandas as pd
 import json
+import time
 import math
 import numpy as np
 import pydash as _
@@ -95,13 +96,7 @@ def CreateDiary(trip_list,typ): # typ = 'bostad' eller 'arbete'
 		purpose = row['purpose']
 		end_tour = False
 
-		# if row['b_p'] == 'bostad':
-		# 	purpose = 'bostad'
-		# 	end_tour = True
-
 		if row['b_p'] == typ:
-			if typ == 'arbete':
-				print(row['UENR'], row['b_p'], day_type)
 			purpose = typ
 			end_tour = True
 
@@ -216,27 +211,6 @@ def ModeRecoded(mode):
 	elif mode == 'cykel': return 'cykel'
 	elif mode == 'gång': return 'gång'
 	else: return 'övrigt'
-
-#def myCSV(filename, cols, types):
-	# result = []
-	# with open(filename) as f:
-	# 	rows = f.readlines()
-	# 	header = rows[0].rstrip().split(',')
-	# 	print(header)
-	# 	indexes = [header.index(col) for col in cols]
-	# 	print(indexes)
-	# 	rows = [row.rstrip().split(',') for row in rows[1:]]
-	# 	for row in rows:
-	# 		n = len(cols)
-	# 		sow = [''] * n
-	# 		for i in range(n):
-	# 			index = indexes[i]
-	# 			sow[i] = row[index]
-	# 			print(row[1],i,index,sow[i])
-	# 			if types[i] == '1': sow[i] = int(sow[i])   if sow[i] != 'NA' else 'NA'
-	# 			if types[i] == '.': sow[i] = float(sow[i]) if sow[i] != 'NA' else 'NA'
-	# 		result.append(_.zip_object(cols,sow))
-#	return result
 
 def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
 	for row in rows:
@@ -566,7 +540,10 @@ def WB_TourProperties(tour_diary):
 
 	return tour
 
+start = time.time()
+
 with open('settings.json') as f: settings = json.load(f)
+print(settings)
 projekt = settings['projekt']
 koder = projekt + 'koder/'
 skiprows = settings['skiprows']
@@ -589,14 +566,6 @@ for col in cols: converters[col] = lambda x : x # leave every cell as a string
 rvuA = pd.read_csv(projekt + 'rvu.csv', usecols=cols, nrows=nrows, skiprows=range(1,skiprows),converters = converters)
 rvuB = rvuA.to_dict('records')
 rvuC = changeTypes(rvuB,cols,types)
-
-#rvuB = myCSV(projekt + 'rvu.csv', cols, '1111111.1111111')
-#dtype = {'id': np.int32}
-# for col in ['D_A_KL', 'D_B_KL', 'D_A_SVE']:
-# 	rvuA[col] = pd.to_numeric(rvuA[col], errors='coerce')
-#rvuA['D_A_KL'] = rvuA['D_A_KL'].astype(pd.Int64Dtype())
-#rvuA['D_B_KL'] = rvuA['D_B_KL'].astype(pd.Int64Dtype())
-#rvuB = replaceNA(rvuB)
 
 # Koda om färdmedel, ärende etc
 # Vi kodar om resvaneundersökningens sifferkoder för till exempel färdmedel till de grupperade färdmedel som används i Sampers. Detsamma görs för ärende, plats (dvs bostad, arbetsplats, skola, annat). Vi kodar också på Sampers-region istället för län så att vi kan titta på eventuella skillnader mellan regionerna senare.
@@ -629,21 +598,21 @@ rvuH = groupBy(rvuG, ['UENR'])
 
 #####################
 
-rvuI = []
-for group in rvuH:
-	lst = CreateDiary(rvuH[group],'arbete')
-	for item in lst:
-		rvuI.append(item)
-
-#cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB,activity_range,trip_range,main_trip_range,outbound_range,inbound_range'.split(',')
-cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB'.split(',')
-rvuJ = [r for r in rvuI if r['day_type'] in ['arbete->arbete', 'arbete->bostad', 'arbete->annat', 'arbete->bostad_fri', 'arbete->bostad_ovr']]  # Workbased
-rvuK = groupBy(rvuJ, ['UENR', 'tour'])
-rvuL = [WB_TourProperties(rvuK[group]) for group in rvuK]
-rvuM = pickColumns(cols, rvuL)
-if len(rvuM) > 0:
-	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(projekt + 'aked_new.csv', index=False, columns=cols) # arbetsplatsbaserat
+# rvuI = []
+# for group in rvuH:
+# 	lst = CreateDiary(rvuH[group],'arbete')
+# 	for item in lst:
+# 		rvuI.append(item)
+#
+# #cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB,activity_range,trip_range,main_trip_range,outbound_range,inbound_range'.split(',')
+# cols = 'UENR,DAG,tour,purpose,mode,weight,Adur,Mdur,zoneA,zoneB'.split(',')
+# rvuJ = [r for r in rvuI if r['day_type'] in ['arbete->arbete', 'arbete->bostad', 'arbete->annat', 'arbete->bostad_fri', 'arbete->bostad_ovr']]  # Workbased
+# rvuK = groupBy(rvuJ, ['UENR', 'tour'])
+# rvuL = [WB_TourProperties(rvuK[group]) for group in rvuK]
+# rvuM = pickColumns(cols, rvuL)
+# if len(rvuM) > 0:
+# 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
+# 	ttdf_arb.to_csv(projekt + 'aked_new.csv', index=False, columns=cols) # arbetsplatsbaserat
 
 #####################
 
@@ -662,3 +631,4 @@ if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
 	ttdf_arb.to_csv(projekt + 'bked_new.csv', index=False, columns=cols) # bostadsbaserat
 
+print(time.time()-start)
