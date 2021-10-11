@@ -11,6 +11,9 @@ UNKNOWN = -99
 
 def runAsserts():
 
+	assert "1" in "AB12"
+	assert "3" not in "AB12"
+
 	assert minutes(99) == 99
 	assert minutes(UNKNOWN) == UNKNOWN
 	assert minutes(100) == 60
@@ -89,10 +92,10 @@ def ModeHierarchy(modes):
 # 	elif mode == 'gång': return 'gång'
 # 	else: return 'övrigt'
 
-acc = 0
-
-def findTrip(rows,first,last,tour,parts): # första Arbete eller första Tjänste eller längsta aktivitet
-	trips = rows[first:last + 1]
+def findTrip(rows,first,last,exclude,tour,parts): # första Arbete eller första Tjänste eller längsta aktivitet
+	include = [i for i in range(first,last+1) if i not in exclude]
+	#trips = rows[first:last + 1]
+	trips = [rows[i] for i in include]
 	acts = [t for t in trips if t['purpose'] == 'Arbete']
 
 	modes = [row['mode'] for row in trips]
@@ -103,22 +106,23 @@ def findTrip(rows,first,last,tour,parts): # första Arbete eller första Tjänst
 		acts = [t for t in trips if t['purpose'] == 'Tjänste']
 		if len(acts) > 0: act = acts[0]
 		else:
-			if first == last: act = rows[first]
+			#if first == last: act = rows[first]
+			if len(include) == 1: act = rows[include[0]]
 			else:
-				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in range(first,last)]
+				if include[-1] == last:
+					include.pop()
+				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in include] # range(first,last)]
 				arr.sort(key=lambda a : a[0])
 				dur,act = arr[-1]
 	result = _.pick(act,'UENR,D_A_S,D_B_S,purpose,mode,VIKT_DAG,BOST_LAN,region'.split(','))
 	result['D_A_S'] = rows[first]['D_A_S']
 	result['mode'] = mode
 	result['tour'] = tour
-	result['parts'] = parts
+	if "1" in options or "2" in options:
+		result['parts'] = parts
 	return result
 
 def stateMachine(rows):
-	global acc
-	start = time.time()
-
 	A = [4, 5]     # arbetsplatser
 	B = [1, 2, 3]  # bostäder
 	a_stack = []
@@ -126,27 +130,31 @@ def stateMachine(rows):
 	a_tour = 1
 	b_tour = 1
 
+	exclude = []
 	for i in range(len(rows)):
 		row = rows[i]
 		if row[A_P] in A: a_stack.append(i)
 		if row[A_P] in B: b_stack.append(i)
 		if row[B_P] in A and len(a_stack) > 0 and a_stack[-1] != i:
-			aked.append(findTrip(rows,a_stack.pop(),i,a_tour,2))
+			start = a_stack.pop()
+			for j in range(start,i+1): exclude.append(j)
+			aked.append(findTrip(rows,start,i,[],a_tour,2))
 			a_tour += 1
 		if row[B_P] in B and len(b_stack) > 0 and b_stack[-1] != i:
-			bked.append(findTrip(rows,b_stack.pop(),i,b_tour,2))
+			bked.append(findTrip(rows,b_stack.pop(),i,exclude,b_tour,2))
 			b_tour += 1
 
 	# if len(a_stack) > 0: aked.append(findTrip(rows,a_stack.pop(),len(rows)-1,a_tour))
-	if len(b_stack) > 0: bked.append(findTrip(rows,b_stack.pop(),len(rows)-1,b_tour,1))
-
-	acc += time.time()-start
+	#if "1" in options and len(b_stack) > 0:
+	#	bked.append(findTrip(rows,b_stack.pop(),len(rows)-1,include,b_tour,1))
 
 start = time.time()
 
 with open('settings.json') as f: settings = json.load(f)
-projekt = settings['projekt']
-koder = projekt + 'koder/'
+print(settings)
+options = settings['projekt'][0]
+katalog = settings['projekt'][1]
+koder = katalog + 'koder/'
 
 region_lookup  = makeLookup("region.txt",'lkod','region')
 work_lookup    = makeLookup("arbete.txt",'kod','status')
@@ -161,7 +169,7 @@ cols = f"VIKT_DAG,D_A_S,D_B_S,UENR,UEDAG,BOST_LAN,{ÄRENDE},D_FORD,D_A_KL,D_B_KL
 converters = {}
 for col in cols: converters[col] = lambda x : x  # leave every cell as a string
 
-rvuA = pd.read_csv(projekt + 'rvu.csv', usecols=cols, converters=converters)
+rvuA = pd.read_csv(katalog + 'rvu.csv', usecols=cols, converters=converters)
 rvuB = rvuA.to_dict('records')
 rvuC = changeTypes(rvuB,cols,'.AA1111111111111')
 
@@ -181,8 +189,7 @@ bked = []
 
 for uenr in rvuH: stateMachine(rvuH[uenr])
 
-pd.DataFrame.from_dict(aked).to_csv(projekt + 'aked.csv', index=False)
-pd.DataFrame.from_dict(bked).to_csv(projekt + 'bked.csv', index=False)
+if "A" in options: pd.DataFrame.from_dict(aked).to_csv(katalog + 'aked.csv', index=False)
+if "B" in options: pd.DataFrame.from_dict(bked).to_csv(katalog + 'bked.csv', index=False)
 
 print(time.time()-start)
-print(acc)

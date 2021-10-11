@@ -544,8 +544,9 @@ start = time.time()
 
 with open('settings.json') as f: settings = json.load(f)
 print(settings)
-projekt = settings['projekt']
-koder = projekt + 'koder/'
+options = settings['projekt'][0]
+katalog = settings['projekt'][1]
+koder = katalog + 'koder/'
 skiprows = settings['skiprows']
 nrows = settings['nrows']
 
@@ -563,7 +564,7 @@ types = '1111111.1111111'
 converters = {}
 for col in cols: converters[col] = lambda x : x # leave every cell as a string
 
-rvuA = pd.read_csv(projekt + 'rvu.csv', usecols=cols, nrows=nrows, skiprows=range(1,skiprows),converters = converters)
+rvuA = pd.read_csv(katalog + 'rvu.csv', usecols=cols, nrows=nrows, skiprows=range(1,skiprows),converters = converters)
 rvuB = rvuA.to_dict('records')
 rvuC = changeTypes(rvuB,cols,types)
 
@@ -612,7 +613,7 @@ rvuH = groupBy(rvuG, ['UENR'])
 # rvuM = pickColumns(cols, rvuL)
 # if len(rvuM) > 0:
 # 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-# 	ttdf_arb.to_csv(projekt + 'aked_new.csv', index=False, columns=cols) # arbetsplatsbaserat
+# 	ttdf_arb.to_csv(katalog + 'aked_new.csv', index=False, columns=cols) # arbetsplatsbaserat
 
 #####################
 
@@ -629,6 +630,6 @@ rvuL = [TourProperties(rvuK[group]) for group in rvuK]
 rvuM = pickColumns(cols, rvuL)
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(projekt + 'bked_new.csv', index=False, columns=cols) # bostadsbaserat
+	ttdf_arb.to_csv(katalog + 'bked_new.csv', index=False, columns=cols) # bostadsbaserat
 
 print(time.time()-start)
