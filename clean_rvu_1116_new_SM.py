@@ -10,6 +10,7 @@ B_P = 'D_B_PKT'
 UNKNOWN = -99
 
 start = time.time()
+logg = []
 
 def runAsserts():
 
@@ -62,6 +63,25 @@ def runAsserts():
 # 	global start
 	#print('cpu', label, ':', time.time() - start)
 	#start = time.time()
+
+def info(title, rvu):
+	if len(rvu) == 0: return f"{title}:\n  0 rader\n  0 kolumner\n"
+	return f"{title}:\n  {len(rvu)} rader\n  {len(rvu[0])} kolumner\n  {','.join(rvu[0].keys())}\n"
+
+def freq(rvu,col):
+	result = {}
+	for row in rvu:
+		data = row[col]
+		if data not in result: result[data] = 0
+		result[data] += 1
+
+	result = [[result[key],key] for key in result]
+	result.sort()
+	result.reverse()
+	res = f"  frekvenser för {col}:\n"
+	for count,key in result:
+		res += f"    {key}: {count}\n"
+	return res
 
 def minutes(t):
 	if t == 'NA' or t == UNKNOWN or t >= 2400: return UNKNOWN
@@ -190,7 +210,6 @@ options = projekt["options"]
 katalog = projekt["katalog"]
 ÄRENDE = projekt["purpose"]
 koder = katalog + 'koder/'
-print(projekt)
 
 region_lookup  = makeLookup("region.txt",'lkod','region')
 # work_lookup    = makeLookup("arbete.txt",'kod','status')
@@ -230,4 +249,30 @@ for uenr in rvuH: stateMachine(rvuH[uenr])
 if "A" in options: pd.DataFrame.from_dict(aked).to_csv(katalog + 'aked.csv', index=False)
 if "B" in options: pd.DataFrame.from_dict(bked).to_csv(katalog + 'bked.csv', index=False)
 
-print(time.time()-start)
+logg.append(f"katalog: {projekt['katalog']}")
+logg.append(f"options: {projekt['options']}")
+logg.append(f"purpose: {projekt['purpose']}")
+logg.append(f"A: {projekt['A']}")
+logg.append(f"B: {projekt['B']}")
+logg.append("")
+
+logg.append(info('rvu.csv',rvuC))
+logg.append(freq(rvuG,'mode'))
+logg.append(freq(rvuG,'purpose'))
+logg.append(freq(rvuG,'UEDAG'))
+logg.append(freq(rvuG,'D_A_PKT'))
+logg.append(freq(rvuG,'D_B_PKT'))
+logg.append(freq(rvuG,'BOST_LAN'))
+logg.append(freq(rvuG,'region'))
+
+logg.append(info('aked.csv',aked))
+logg.append(freq(aked,'tour'))
+logg.append(freq(aked,'parts'))
+
+logg.append(info('bked.csv',bked))
+logg.append(freq(bked,'tour'))
+logg.append(freq(bked,'parts'))
+
+logg.append(f"Exekveringstid: {int(1000*(time.time()-start))} ms")
+with open(katalog + 'log.txt', 'w', encoding='utf-8') as f:
+	f.write("\n".join(logg))

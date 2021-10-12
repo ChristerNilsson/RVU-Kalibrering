@@ -1,7 +1,7 @@
 Innehåller pythonkod och dokumentation. Se wikin.
 
 # rvu.csv
-
+Kommaseparerad utf-8
 * `UENR` resans id
 * `UEDAG` 1=mån .. 7=sön
 * `D_A_S` start samsområde
@@ -18,6 +18,7 @@ Innehåller pythonkod och dokumentation. Se wikin.
 * `VIKT_DAG` vikt
 
 # aked.csv
+Kommaseparerad utf-8
 * `UENR` se rvu.csv
 * `D_A_S` se rvu.csv
 * `D_B_S` se rvu.csv
@@ -36,31 +37,6 @@ Se aked.csv
 
 Denna fil är personlig och ligger inte på github.
 
-* `index`
-	* Anger vilket projekt som ska köras. Namnen behöver inte vara heltal.
-* `katalog`. Filnamnen är förutbestämda. Alla filer är kommaseparerade csv-filer (utf-8)
-	* `rvu.csv` (IN)
-	* `koder` (IN)
-		* `arbete.txt`
-		* `färdmedel.txt`
-		* `plats.txt`
-		* `region.txt`
-		* `ärende.txt`
-	* `aked.csv` (UT)
-	* `bked.csv` (UT)
-* `purpose`. Anger vilken kolumn som ska användas.
-	* `D_ARE`
-	* `D_AREALL`
-* `options`
-	* `A` = skapa `aked.csv`, dvs arbetsplatsbaserade resor
-	* `B` = skapa `bked.csv`, dvs bostadsbaserade resor
-	* `1` = resor med `parts` = 1 (enkelresor)
-	* `2` = resor med `parts` = 2 (tur och retur)
-
-* `A`: Lista över arbetsplatser
-	* [4,5] *plats.txt*
-* `B`: Lista med bostadsplatser
-	* [1,2,3] *plats.txt*
 ```
 {
     "0": {"katalog":"C:/github/RVU-kalibrering/SAMM_121400_414/",
@@ -73,3 +49,30 @@ Denna fil är personlig och ligger inte på github.
 }
 ```
 
+* `index`
+	* Anger vilket projekt som ska köras. Namnen behöver inte vara heltal.
+
+* *projekt* Ett eller flera projekt kan anges
+	* `katalog`. Filnamnen är förutbestämda. Alla filer är kommaseparerade csv-filer (utf-8)
+		* `rvu.csv` (IN)
+		* `koder` (IN)
+			* `arbete.txt` (används ej)
+			* `färdmedel.txt`
+			* `plats.txt`
+			* `region.txt`
+			* `ärende.txt`
+		* `aked.csv` (UT)
+		* `bked.csv` (UT)
+	* `purpose`. Anger ärendekolumnens namn.
+		* `D_ARE`
+		* `D_AREALL`
+	* `options`
+		* `A` = skapa `aked.csv`, dvs arbetsplatsbaserade resor
+		* `B` = skapa `bked.csv`, dvs bostadsbaserade resor
+		* `1` = resor med `parts` = 1 (enkelresor)
+		* `2` = resor med `parts` = 2 (tur och retur)
+
+	* `A`: Lista över arbetsplatser
+		* [4,5] *plats.txt*
+	* `B`: Lista över bostadsplatser
+		* [1,2,3] *plats.txt*
