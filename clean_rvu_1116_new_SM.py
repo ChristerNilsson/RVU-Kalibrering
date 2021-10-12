@@ -45,8 +45,8 @@ def runAsserts():
 	assert region_lookup[1] == 'SAMM'
 	assert region_lookup[14] == 'Väst'
 
-	assert work_lookup[3] == 'arbetar'
-	assert work_lookup[4] == 'övrigt'
+	# assert work_lookup[3] == 'arbetar'
+	# assert work_lookup[4] == 'övrigt'
 
 # def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
 # 	for row in rows:
@@ -133,8 +133,8 @@ def findTrip(rows,first,last,exclude,tour,parts): # första Arbete eller första
 	return result
 
 def stateMachine(rows):
-	A = [4, 5]     # arbetsplatser
-	B = [1, 2, 3]  # bostäder
+	A = projekt["A"]  # arbetsplatser
+	B = projekt["B"]  # bostäder
 	a_stack = []
 	b_stack = []
 	a_tour = 1
@@ -193,7 +193,7 @@ koder = katalog + 'koder/'
 print(projekt)
 
 region_lookup  = makeLookup("region.txt",'lkod','region')
-work_lookup    = makeLookup("arbete.txt",'kod','status')
+# work_lookup    = makeLookup("arbete.txt",'kod','status')
 mode_lookup    = makeLookup("färdmedel.txt",'id','grp')
 purpose_lookup = makeLookup("ärende.txt",'id','grp')
 place_lookup   = makeLookup("plats.txt",'id','plats')
