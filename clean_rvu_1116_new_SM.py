@@ -9,6 +9,8 @@ B_P = 'D_B_PKT'
 
 UNKNOWN = -99
 
+start = time.time()
+
 def runAsserts():
 
 	assert "1" in "AB12"
@@ -21,7 +23,7 @@ def runAsserts():
 	assert minutes(2400) == UNKNOWN
 
 	rows = [{'A':1}, {'A':1}, {'A':2}]
-	assert _.group_by(rows,'A') == {1:[{'A':1},{'A':1}], 2:[{'A':2}]}
+	#assert _.group_by(rows,'A') == {1:[{'A':1},{'A':1}], 2:[{'A':2}]}
 
 	assert ModeHierarchy(['buss','spv','cykel']), 'koll'
 	assert ModeHierarchy(['gång','gång','cykel']), 'cykel'
@@ -46,15 +48,20 @@ def runAsserts():
 	assert work_lookup[3] == 'arbetar'
 	assert work_lookup[4] == 'övrigt'
 
-def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
-	for row in rows:
-		for i in range(len(cols)):
-			cell = row[cols[i]]
-			if cell == 'NA': continue
-			if types[i] == '1': cell = int(cell)
-			if types[i] == '.': cell = float(cell)
-			row[cols[i]] = cell
-	return rows
+# def changeTypes(rows, cols, types):  # types: .=float 1=int A=string
+# 	for row in rows:
+# 		for i in range(len(cols)):
+# 			cell = row[cols[i]]
+# 			if cell == 'NA': continue
+# 			if types[i] == '1': cell = int(cell)
+# 			if types[i] == '.': cell = float(cell)
+# 			row[cols[i]] = cell
+# 	return rows
+
+# def cpu(label):
+# 	global start
+	#print('cpu', label, ':', time.time() - start)
+	#start = time.time()
 
 def minutes(t):
 	if t == 'NA' or t == UNKNOWN or t >= 2400: return UNKNOWN
@@ -111,9 +118,16 @@ def findTrip(rows,first,last,exclude,tour,parts): # första Arbete eller första
 				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in include]
 				arr.sort(key=lambda a : a[0])
 				dur,act = arr[-1]
-	result = _.pick(act,'UENR,D_A_S,D_B_S,purpose,mode,VIKT_DAG,BOST_LAN,region'.split(','))
+
+	result = {} # _.pick tar 100 ggr längre tid!
+	result["UENR"] = act["UENR"]
 	result['D_A_S'] = rows[first]['D_A_S']
+	result['D_B_S'] = act['D_B_S']
+	result['purpose'] = act['purpose']
 	result['mode'] = mode
+	result['BOST_LAN'] = act['BOST_LAN']
+	result['region'] = act['region']
+	result['VIKT_DAG'] = act['VIKT_DAG']
 	result['tour'] = tour
 	result['parts'] = parts
 	return result
@@ -144,13 +158,39 @@ def stateMachine(rows):
 	#if "1" in options and len(b_stack) > 0:
 	#	bked.append(findTrip(rows,b_stack.pop(),len(rows)-1,include,b_tour,1))
 
+def to_dict(rvu):
+	cols = []
+	for index, key in enumerate(rvu.items()):
+		cols.append(key[0])
+
+	result = []
+	for r in rvu.itertuples(index=False):
+		hash = {}
+		for index in range(len(cols)):
+			key = cols[index]
+			cell = r[index]
+			if cell == 'NA':
+				hash[key] = cell
+				continue
+			if key == 'VIKT_DAG':
+				hash[key] = float(cell)
+			elif key == 'D_A_S' or key == 'D_B_S':
+				hash[key] = cell
+			else:
+				hash[key] = int(cell)
+		result.append(hash)
+	return result
+
 start = time.time()
 
 with open('settings.json') as f: settings = json.load(f)
-print(settings)
-options = settings['projekt'][0]
-katalog = settings['projekt'][1]
+index = settings["index"]
+projekt = settings[index]
+options = projekt["options"]
+katalog = projekt["katalog"]
+ÄRENDE = projekt["purpose"]
 koder = katalog + 'koder/'
+print(projekt)
 
 region_lookup  = makeLookup("region.txt",'lkod','region')
 work_lookup    = makeLookup("arbete.txt",'kod','status')
@@ -166,8 +206,10 @@ converters = {}
 for col in cols: converters[col] = lambda x : x  # leave every cell as a string
 
 rvuA = pd.read_csv(katalog + 'rvu.csv', usecols=cols, converters=converters)
-rvuB = rvuA.to_dict('records')
-rvuC = changeTypes(rvuB,cols,'.AA1111111111111')
+rvuC = to_dict(rvuA)
+
+#rvuB = rvuA.to_dict('records')
+# changeTypes(rvuB,cols,'.AA1111111111111')
 
 for r in rvuC:
 	r['purpose'] = purpose_lookup[r[ÄRENDE]]
