@@ -1,16 +1,15 @@
 import pandas as pd
 import json
-import pydash as _
 import time
 
-ÄRENDE = 'D_ARE'  # D_ARE eller D_AREALL
+ÄRENDE = 'D_AREALL'  # D_ARE eller D_AREALL
 A_P = 'D_A_PKT'
 B_P = 'D_B_PKT'
 
 UNKNOWN = -99
 
-start = time.time()
 logg = []
+cpus = []
 
 def runAsserts():
 
@@ -34,8 +33,8 @@ def runAsserts():
 	# assert ModeRecoded('buss') == 'koll'
 	# assert ModeRecoded('sparkcykel') == 'övrigt'
 
-	assert mode_lookup[1] == 'gång'
-	assert mode_lookup[2] == 'cykel'
+	# assert mode_lookup[1] == 'gång'
+	# assert mode_lookup[2] == 'cykel'
 
 	# assert purpose_lookup[2] == 'Arbete'
 	# assert purpose_lookup[3] == 'Skola'
@@ -59,10 +58,13 @@ def runAsserts():
 # 			row[cols[i]] = cell
 # 	return rows
 
-# def cpu(label):
-# 	global start
-	#print('cpu', label, ':', time.time() - start)
-	#start = time.time()
+def cpu(label): cpus.append([label, time.time()])
+
+def loggCpu():
+	last = cpus[0][1]
+	for label,t in cpus:
+		logg.append(f"cpu {round(1000*(t-last))} ms {label}")
+		last = t
 
 def info(title, rvu):
 	if len(rvu) == 0: return f"{title}:\n  0 rader\n  0 kolumner\n"
@@ -82,6 +84,24 @@ def freq(rvu,col):
 	for count,key in result:
 		res += f"    {key}: {count}\n"
 	return res
+
+#def getLAN(row): return 1
+
+def groupBy(arr, col):
+	result = {}
+	for row in arr:
+		value = row[col] #[str(row[col]) for col in cols]
+		#value = ':'.join(value)
+		if value not in result: result[value] = [row]
+		else: result[value].append(row)
+	return result
+
+def homeRoundTrip(r):
+	for b in projekt['B']:
+		if r[A_P] == b == r[B_P]: return True
+	return False
+
+	#r[A_P] == 1 and r[B_P] == 1 or r[A_P] == 2 and r[B_P] == 2 or r[A_P] == 3 and r[B_P] == 3)
 
 def minutes(t):
 	if t == 'NA' or t == UNKNOWN or t >= 2400: return UNKNOWN
@@ -119,32 +139,78 @@ def ModeHierarchy(modes):
 # 	elif mode == 'gång': return 'gång'
 # 	else: return 'övrigt'
 
-def findTrip(rows,first,last,exclude,tour,parts): # första Arbete eller första Tjänste eller längsta aktivitet
-	include = [i for i in range(first,last+1) if i not in exclude]
-	trips = [rows[i] for i in include]
-	acts = [t for t in trips if t['purpose'] == 'Arbete']
+def saveLogg():
+	logg.append(f"katalog: {projekt['katalog']}")
+	logg.append(f"options: {projekt['options']}")
+	logg.append(f"purpose: {projekt['purpose']}")
+	logg.append(f"A: {projekt['A']}")
+	logg.append(f"B: {projekt['B']}")
+	logg.append("")
 
-	modes = [row['mode'] for row in trips]
+	logg.append(info('rvu.csv', rvuC))
+	logg.append(freq(rvuG, 'mode'))
+	logg.append(freq(rvuG, 'purpose'))
+	logg.append(freq(rvuG, 'UEDAG'))
+	logg.append(freq(rvuG, 'D_A_PKT'))
+	logg.append(freq(rvuG, 'D_B_PKT'))
+	logg.append(freq(rvuG, 'BOST_LAN'))
+	logg.append(freq(rvuG, 'region'))
+
+	logg.append(info('aked.csv', aked))
+	logg.append(freq(aked, 'tour'))
+	logg.append(freq(aked, 'parts'))
+
+	logg.append(info('bked.csv', bked))
+	logg.append(freq(bked, 'tour'))
+	logg.append(freq(bked, 'parts'))
+
+	loggCpu()
+	logg.append("")
+
+	logg.append(f"Exekveringstid: {int(1000 * (time.time() - start))} ms")
+
+	with open(katalog + 'log.txt', 'w', encoding='utf-8') as f:
+		f.write("\n".join(logg))
+
+def findTrip(rows,first,last,tour,parts,purpose0, purpose1):
+	"""sök upp första Arbete eller första Tjänste eller längsta aktivitet"""
+
+	include0 = [i for i in range(first,last+0)]
+	include1 = [i for i in range(first,last+1)]
+
+	trips0 = [rows[i] for i in range(first, last + 0)]
+	trips1 = [rows[i] for i in range(first, last + 1)]
+	if parts == 1: trips0 = trips1
+
+	modes = [row['mode'] for row in trips1]
 	mode = ModeHierarchy(modes)
 
+	acts = [t for t in trips0 if t['purpose'] == purpose0]
 	if len(acts) > 0: act = acts[0]
 	else:
-		acts = [t for t in trips if t['purpose'] == 'Tjänste']
+		acts = [t for t in trips0 if t['purpose'] == purpose1]
 		if len(acts) > 0: act = acts[0]
 		else:
-			if len(include) == 1: act = rows[include[0]]
+			if len(include0) == 0:
+				return None
+			if len(include1) == 1: act = rows[include1[0]]
 			else:
-				if include[-1] == last: include.pop()
-				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in include]
+				if include0[-1] == last: include0.pop()
+				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in include0]
 				arr.sort(key=lambda a : a[0])
 				dur,act = arr[-1]
 
 	result = {} # _.pick tar 100 ggr längre tid!
+	result['F'] = first
+	result['I'] = rows.index(act)
+	result['L'] = last
 	result["UENR"] = act["UENR"]
 	result['D_A_S'] = rows[first]['D_A_S']
 	result['D_B_S'] = act['D_B_S']
 	result['purpose'] = act['purpose']
+	result[ÄRENDE] = act[ÄRENDE]
 	result['mode'] = mode
+	result['D_FORD'] = act['D_FORD']
 	result['BOST_LAN'] = act['BOST_LAN']
 	result['region'] = act['region']
 	result['VIKT_DAG'] = act['VIKT_DAG']
@@ -160,25 +226,39 @@ def stateMachine(rows):
 	a_tour = 1
 	b_tour = 1
 
-	exclude = [] # samla in alla index inblandade i arbetsbaserade resor.
+	exclude = []
+
 	for i in range(len(rows)):
 		row = rows[i]
-		if row[A_P] in A: a_stack.append(i)
-		if row[A_P] in B: b_stack.append(i)
+
+		if row[A_P] in B:
+			b_stack.append(i)
+
+		if row[B_P] in B and len(b_stack) > 0 and b_stack[-1] != i:
+			start = b_stack.pop()
+			for j in range(start,i+1): exclude.append(j)
+			trip = findTrip(rows, start, i, b_tour, 2, 'Arbete', 'Tjänste')
+			if trip != None:
+				bked.append(trip)
+				b_tour += 1
+
+		if row[A_P] in A:
+			if i not in exclude:
+				a_stack.append(i)
+
 		if row[B_P] in A and len(a_stack) > 0 and a_stack[-1] != i:
 			start = a_stack.pop()
-			for j in range(start,i+1): exclude.append(j)
-			aked.append(findTrip(rows,start,i,[],a_tour,2))
-			a_tour += 1
-		if row[B_P] in B and len(b_stack) > 0 and b_stack[-1] != i:
-			bked.append(findTrip(rows,b_stack.pop(),i,exclude,b_tour,2))
-			b_tour += 1
+			trip = findTrip(rows, start, i, a_tour, 2, 'Tjänste', 'Arbete')
+			if trip != None:
+				aked.append(trip)
+				a_tour += 1
 
-	# if len(a_stack) > 0: aked.append(findTrip(rows,a_stack.pop(),len(rows)-1,a_tour))
-	#if "1" in options and len(b_stack) > 0:
-	#	bked.append(findTrip(rows,b_stack.pop(),len(rows)-1,include,b_tour,1))
+	if "B" in options and "1" in options and len(b_stack) > 0:
+		trip = findTrip(rows,b_stack.pop(),len(rows)-1,b_tour,1,'Arbete','Tjänste')
+		if trip != None:
+			bked.append(trip)
 
-def to_dict(rvu):
+def to_dict(rvu): # Hanterar NA, typer, omvandling till dict. Kan modifieras till att byta kolumnnamn.
 	cols = []
 	for index, key in enumerate(rvu.items()):
 		cols.append(key[0])
@@ -189,18 +269,19 @@ def to_dict(rvu):
 		for index in range(len(cols)):
 			key = cols[index]
 			cell = r[index]
-			if cell == 'NA':
-				hash[key] = cell
-				continue
-			if key == 'VIKT_DAG':
-				hash[key] = float(cell)
-			elif key == 'D_A_S' or key == 'D_B_S':
-				hash[key] = cell
-			else:
-				hash[key] = int(cell)
+			if cell == 'NA' or key == 'D_A_S' or key == 'D_B_S': hash[key] = cell
+			elif key == 'VIKT_DAG': hash[key] = float(cell)
+			else: hash[key] = int(cell)
 		result.append(hash)
 	return result
 
+def pick (cols,r):
+	result = {}
+	for col in cols:
+		result[col] = r[col]
+	return result
+
+cpu('start')
 start = time.time()
 
 with open('settings.json') as f: settings = json.load(f)
@@ -212,67 +293,53 @@ katalog = projekt["katalog"]
 koder = katalog + 'koder/'
 
 region_lookup  = makeLookup("region.txt",'lkod','region')
-# work_lookup    = makeLookup("arbete.txt",'kod','status')
 mode_lookup    = makeLookup("färdmedel.txt",'id','grp')
-purpose_lookup = makeLookup("ärende.txt",'id','grp')
+purpose_lookup = makeLookup("ärende_new.txt",'id','grp')
 place_lookup   = makeLookup("plats.txt",'id','plats')
 
 runAsserts()
 
 cols = f"VIKT_DAG,D_A_S,D_B_S,UENR,UEDAG,BOST_LAN,{ÄRENDE},D_FORD,D_A_KL,D_B_KL,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',') # BOST_S
+#cols = f"VIKT_DAG,D_A_S,D_B_S,UENR,UEDAG,BOST_S,{ÄRENDE},D_FORD,D_A_KL,D_B_KL,D_A_SVE,D_B_SVE,D_A_PKT,D_B_PKT".split(',') # BOST_S
 
 converters = {}
 for col in cols: converters[col] = lambda x : x  # leave every cell as a string
+cpu('init')
 
 rvuA = pd.read_csv(katalog + 'rvu.csv', usecols=cols, converters=converters)
-rvuC = to_dict(rvuA)
+cpu('read_csv')
 
-#rvuB = rvuA.to_dict('records')
-# changeTypes(rvuB,cols,'.AA1111111111111')
+rvuC = to_dict(rvuA)
+cpu('to_dict')
 
 for r in rvuC:
 	r['purpose'] = purpose_lookup[r[ÄRENDE]]
 	r['mode']    = mode_lookup[r['D_FORD']]
+cpu('lookup')
 
 rvuD = [r for r in rvuC if r['D_A_SVE'] == 1 and r['D_A_SVE'] == 1] # filtera bort utrikesresor
 rvuF = [r for r in rvuD if r['UEDAG'] <= 7] # filtrera fram veckodagar.
-rvuG = [r for r in rvuF if not (r[A_P] == 1 and r[B_P] == 1 or r[A_P] == 2 and r[B_P] == 2 or r[A_P] == 3 and r[B_P] == 3)] # filtrera bort rundresor
+rvuG = [r for r in rvuF if not homeRoundTrip(r)] # filtrera bort rundresor
+cpu('filter')
 
 for row in rvuG: row["region"] = -1 if row["BOST_LAN"] == -1 else region_lookup[row["BOST_LAN"]]
-rvuH = _.group_by(rvuG, 'UENR')
+cpu('region')
+
+rvuH = groupBy(rvuG, 'UENR')
+cpu('group_by')
 
 aked = []
 bked = []
-
-for uenr in rvuH: stateMachine(rvuH[uenr])
+for uenr in rvuH:
+	#if uenr == 20110111013:
+	if uenr == 20110131010:
+		z=99
+	print(uenr)
+	stateMachine(rvuH[uenr])
+cpu('stateMachine')
 
 if "A" in options: pd.DataFrame.from_dict(aked).to_csv(katalog + 'aked.csv', index=False)
 if "B" in options: pd.DataFrame.from_dict(bked).to_csv(katalog + 'bked.csv', index=False)
+cpu('to_csv')
 
-logg.append(f"katalog: {projekt['katalog']}")
-logg.append(f"options: {projekt['options']}")
-logg.append(f"purpose: {projekt['purpose']}")
-logg.append(f"A: {projekt['A']}")
-logg.append(f"B: {projekt['B']}")
-logg.append("")
-
-logg.append(info('rvu.csv',rvuC))
-logg.append(freq(rvuG,'mode'))
-logg.append(freq(rvuG,'purpose'))
-logg.append(freq(rvuG,'UEDAG'))
-logg.append(freq(rvuG,'D_A_PKT'))
-logg.append(freq(rvuG,'D_B_PKT'))
-logg.append(freq(rvuG,'BOST_LAN'))
-logg.append(freq(rvuG,'region'))
-
-logg.append(info('aked.csv',aked))
-logg.append(freq(aked,'tour'))
-logg.append(freq(aked,'parts'))
-
-logg.append(info('bked.csv',bked))
-logg.append(freq(bked,'tour'))
-logg.append(freq(bked,'parts'))
-
-logg.append(f"Exekveringstid: {int(1000*(time.time()-start))} ms")
-with open(katalog + 'log.txt', 'w', encoding='utf-8') as f:
-	f.write("\n".join(logg))
+saveLogg()

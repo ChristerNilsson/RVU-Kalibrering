@@ -9,8 +9,8 @@ import numpy as np
 import pydash as _
 import operator
 
-ÄRENDE = "D_ARE"
-#ÄRENDE = "D_AREALL"
+#ÄRENDE = "D_ARE"
+ÄRENDE = "D_AREALL"
 
 UNKNOWN = -99
 
@@ -542,13 +542,22 @@ def WB_TourProperties(tour_diary):
 
 start = time.time()
 
+# with open('settings.json') as f: settings = json.load(f)
+# print(settings)
+# options = settings['projekt'][0]
+# katalog = settings['projekt'][1]
+# koder = katalog + 'koder/'
+# skiprows = settings['skiprows']
+# nrows = settings['nrows']
+
 with open('settings.json') as f: settings = json.load(f)
-print(settings)
-options = settings['projekt'][0]
-katalog = settings['projekt'][1]
+index = settings["index"]
+projekt = settings[index]
+options = projekt["options"]
+katalog = projekt["katalog"]
+ÄRENDE = projekt["purpose"]
 koder = katalog + 'koder/'
-skiprows = settings['skiprows']
-nrows = settings['nrows']
+
 
 region_lookup = makeLookup("region.txt",'lkod','region')
 work_lookup = makeLookup("arbete.txt",'kod','status')
@@ -564,7 +573,8 @@ types = '1111111.1111111'
 converters = {}
 for col in cols: converters[col] = lambda x : x # leave every cell as a string
 
-rvuA = pd.read_csv(katalog + 'rvu.csv', usecols=cols, nrows=nrows, skiprows=range(1,skiprows),converters = converters)
+#rvuA = pd.read_csv(katalog + 'rvu.csv', usecols=cols, nrows=nrows, skiprows=range(1,skiprows),converters = converters)
+rvuA = pd.read_csv(katalog + 'rvu.csv', usecols=cols, converters = converters)
 rvuB = rvuA.to_dict('records')
 rvuC = changeTypes(rvuB,cols,types)
 
@@ -630,6 +640,6 @@ rvuL = [TourProperties(rvuK[group]) for group in rvuK]
 rvuM = pickColumns(cols, rvuL)
 if len(rvuM) > 0:
 	ttdf_arb = pd.DataFrame.from_dict(rvuM)
-	ttdf_arb.to_csv(katalog + 'bked_new.csv', index=False, columns=cols) # bostadsbaserat
+	ttdf_arb.to_csv(katalog + 'bked.csv', index=False, columns=cols) # bostadsbaserat
 
 print(time.time()-start)
