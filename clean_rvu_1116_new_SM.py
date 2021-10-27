@@ -173,13 +173,13 @@ def saveLogg():
 		f.write("\n".join(logg))
 
 def findTrip(rows,first,last,tour,parts,purpose0, purpose1):
-	"""sök upp första Arbete eller första Tjänste eller längsta aktivitet"""
+	"""sök upp första purpose0 eller första purpose1 eller längsta aktivitet"""
 
-	include0 = [i for i in range(first,last+0)]
-	include1 = [i for i in range(first,last+1)]
+	include0 = range(first,last+0)
+	include1 = range(first,last+1)
 
-	trips0 = [rows[i] for i in range(first, last + 0)]
-	trips1 = [rows[i] for i in range(first, last + 1)]
+	trips0 = [rows[i] for i in include0]
+	trips1 = [rows[i] for i in include1]
 	if parts == 1: trips0 = trips1
 
 	modes = [row['mode'] for row in trips1]
@@ -191,7 +191,7 @@ def findTrip(rows,first,last,tour,parts,purpose0, purpose1):
 		acts = [t for t in trips0 if t['purpose'] == purpose1]
 		if len(acts) > 0: act = acts[0]
 		else:
-			if len(include0) == 0:
+			if len(include1) == 0:
 				return None
 			if len(include1) == 1: act = rows[include1[0]]
 			else:
@@ -200,7 +200,7 @@ def findTrip(rows,first,last,tour,parts,purpose0, purpose1):
 				arr.sort(key=lambda a : a[0])
 				dur,act = arr[-1]
 
-	result = {} # _.pick tar 100 ggr längre tid!
+	result = {}
 	result['F'] = first
 	result['I'] = rows.index(act)
 	result['L'] = last
@@ -248,10 +248,11 @@ def stateMachine(rows):
 
 		if row[B_P] in A and len(a_stack) > 0 and a_stack[-1] != i:
 			start = a_stack.pop()
-			trip = findTrip(rows, start, i, a_tour, 2, 'Tjänste', 'Arbete')
-			if trip != None:
-				aked.append(trip)
-				a_tour += 1
+			if start not in exclude and i not in b_stack:
+				trip = findTrip(rows, start, i, a_tour, 2, 'Tjänste', 'Arbete')
+				if trip != None:
+					aked.append(trip)
+					a_tour += 1
 
 	if "B" in options and "1" in options and len(b_stack) > 0:
 		trip = findTrip(rows,b_stack.pop(),len(rows)-1,b_tour,1,'Arbete','Tjänste')
@@ -331,8 +332,9 @@ cpu('group_by')
 aked = []
 bked = []
 for uenr in rvuH:
-	#if uenr == 20110111013:
-	if uenr == 20110131010:
+	if uenr == 20110621031:
+	#if uenr == 20110341051:
+	#if uenr == 20110131010:
 		z=99
 	print(uenr)
 	stateMachine(rvuH[uenr])
