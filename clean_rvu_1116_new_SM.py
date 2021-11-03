@@ -228,6 +228,14 @@ def stateMachine(rows):
 
 	exclude = []
 
+	AB = A + B
+	row = rows[0]
+
+	if (row[A_P] not in AB) and (row[B_P] not in AB):
+		row = rows[0].copy()
+		row[A_P] = B[0]
+		rows = [row] + rows
+
 	for i in range(len(rows)):
 		row = rows[i]
 
