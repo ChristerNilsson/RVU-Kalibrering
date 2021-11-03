@@ -340,8 +340,8 @@ for uenr in rvuH:
 	stateMachine(rvuH[uenr])
 cpu('stateMachine')
 
-if "A" in options: pd.DataFrame.from_dict(aked).to_csv(katalog + 'aked.csv', index=False)
-if "B" in options: pd.DataFrame.from_dict(bked).to_csv(katalog + 'bked.csv', index=False)
+if "A" in options: pd.DataFrame.from_dict(aked).to_csv(katalog + 'aked_python.csv', index=False)
+if "B" in options: pd.DataFrame.from_dict(bked).to_csv(katalog + 'bked_python.csv', index=False)
 cpu('to_csv')
 
 saveLogg()
