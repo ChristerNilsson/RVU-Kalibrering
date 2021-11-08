@@ -231,7 +231,8 @@ def stateMachine(rows):
 	AB = A + B
 	row = rows[0]
 
-	if (row[A_P] not in AB) and (row[B_P] not in AB):
+	#if row[A_P] not in AB: # and (row[B_P] not in AB):
+	if row[A_P] not in B:  # and (row[B_P] not in AB):
 		row = rows[0].copy()
 		row[A_P] = B[0]
 		rows = [row] + rows
@@ -242,10 +243,15 @@ def stateMachine(rows):
 		if row[A_P] in B:
 			b_stack.append(i)
 
-		if row[B_P] in B and len(b_stack) > 0 and b_stack[-1] != i:
+		if row[B_P] in B and len(b_stack) > 0 : #and b_stack[-1] != i:
 			start = b_stack.pop()
 			for j in range(start,i+1): exclude.append(j)
-			trip = findTrip(rows, start, i, b_tour, 2, 'Arbete', 'Tjänste')
+
+			if start == i:
+				trip = findTrip(rows, start, i, b_tour, 1, 'Arbete', 'Tjänste')
+			else:
+				trip = findTrip(rows, start, i, b_tour, 2, 'Arbete', 'Tjänste')
+
 			if trip != None:
 				bked.append(trip)
 				b_tour += 1
@@ -254,13 +260,14 @@ def stateMachine(rows):
 			if i not in exclude:
 				a_stack.append(i)
 
-		if row[B_P] in A and len(a_stack) > 0 and a_stack[-1] != i:
+		if row[B_P] in A and len(a_stack) > 0 : # and a_stack[-1] != i:
 			start = a_stack.pop()
 			if start not in exclude and i not in b_stack:
-				trip = findTrip(rows, start, i, a_tour, 2, 'Tjänste', 'Arbete')
-				if trip != None:
-					aked.append(trip)
-					a_tour += 1
+				if start != i:
+					trip = findTrip(rows, start, i, a_tour, 2, 'Tjänste', 'Arbete')
+					if trip != None:
+						aked.append(trip)
+						a_tour += 1
 
 	if "B" in options and "1" in options and len(b_stack) > 0:
 		trip = findTrip(rows,b_stack.pop(),len(rows)-1,b_tour,1,'Arbete','Tjänste')
@@ -326,7 +333,7 @@ for r in rvuC:
 	r['mode']    = mode_lookup[r['D_FORD']]
 cpu('lookup')
 
-rvuD = [r for r in rvuC if r['D_A_SVE'] == 1 and r['D_A_SVE'] == 1] # filtera bort utrikesresor
+rvuD = [r for r in rvuC if r['D_A_SVE'] == 1 and r['D_B_SVE'] == 1] # filtera bort utrikesresor
 rvuF = [r for r in rvuD if r['UEDAG'] <= 7] # filtrera fram veckodagar.
 rvuG = [r for r in rvuF if not homeRoundTrip(r)] # filtrera bort rundresor
 cpu('filter')
@@ -340,7 +347,7 @@ cpu('group_by')
 aked = []
 bked = []
 for uenr in rvuH:
-	if uenr == 20110621031:
+	if uenr == 20110251064:
 	#if uenr == 20110341051:
 	#if uenr == 20110131010:
 		z=99
