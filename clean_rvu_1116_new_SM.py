@@ -185,11 +185,22 @@ def findTrip(rows,first,last,tour,parts,purpose0, purpose1):
 	modes = [row['mode'] for row in trips1]
 	mode = ModeHierarchy(modes)
 
-	acts = [t for t in trips0 if t['purpose'] == purpose0]
-	if len(acts) > 0: act = acts[0]
+	acts = [i for i in include0 if rows[i]['purpose'] == purpose0]
+	if len(acts) > 0:
+		if len(acts) == 1:
+			act = rows[acts[0]]
+		else:
+			arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in acts]
+			arr.sort(key=lambda a : a[0])
+			dur,act = arr[-1]
 	else:
-		acts = [t for t in trips0 if t['purpose'] == purpose1]
-		if len(acts) > 0: act = acts[0]
+		acts = [i for i in include0 if rows[i]['purpose'] == purpose1]
+		if len(acts) > 0:
+			if len(acts) == 1: act = rows[acts[0]]
+			else:
+				arr = [[minutes(rows[i+1]['D_A_KL']) - minutes(rows[i]['D_B_KL']), rows[i]] for i in acts]
+				arr.sort(key=lambda a : a[0])
+				dur,act = arr[-1]
 		else:
 			if len(include1) == 0:
 				return None
@@ -347,7 +358,8 @@ cpu('group_by')
 aked = []
 bked = []
 for uenr in rvuH:
-	if uenr == 20110251064:
+	#if uenr == 20110231012:
+	if uenr == 20110111036:
 	#if uenr == 20110341051:
 	#if uenr == 20110131010:
 		z=99
